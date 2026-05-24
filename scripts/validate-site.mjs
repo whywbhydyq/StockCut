@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';
+globalThis.document={querySelector(){return null},addEventListener(){}};globalThis.localStorage={};
+const {parseDim,optSheet,optLinear,parsePaste}=await import('../src/app.js');
+const ok=(c,m)=>{assert.ok(c,m);console.log('✓ '+m)};
+ok(parseDim('12 1/2','in').v===317500,'fractional inch input such as 12 1/2 parses');
+ok(parseDim(`1' 3 3/4"`,'in').v===400050,'feet-inch input parses');
+ok(parseDim('122cm','mm').v===1220000,'cm input parses');
+const base={unit:'in',kerf:'0',stock:{w:'48',h:'96',q:'auto',trim:'0'},parts:[{label:'A',w:'24',h:'48',q:'2',r:false}]};
+const a=optSheet(base),b=optSheet({...base,kerf:'1/8'});ok(JSON.stringify(a)!==JSON.stringify(b),'48×96 inch stock kerf=0 and 1/8 differ');
+ok(optSheet({unit:'mm',kerf:'3mm',stock:{w:'1220mm',h:'2440mm',q:'auto',trim:'0'},parts:[{label:'P',w:'600mm',h:'800mm',q:'3',r:true}]}).sheets.length>0,'2440×1220mm stock arranges');
+ok(optSheet({unit:'in',kerf:'0',stock:{w:'10',h:'10',q:'1',trim:'0'},parts:[{label:'Huge',w:'11',h:'11',q:'1',r:true}]}).unplaced.length===1,'part larger than stock enters unplacedParts');
+ok(optSheet({unit:'in',kerf:'0',stock:{w:'10',h:'20',q:'1',trim:'0'},parts:[{label:'R',w:'18',h:'8',q:'1',r:false}]}).unplaced.length===1&&optSheet({unit:'in',kerf:'0',stock:{w:'10',h:'20',q:'1',trim:'0'},parts:[{label:'R',w:'18',h:'8',q:'1',r:true}]}).sheets[0].p.length===1,'forbid and allow rotation differ');
+ok(optLinear({unit:'in',kerf:'1/8',stock:{l:'96',q:'auto'},parts:[{label:'Cut',l:'30',q:'3'}]}).stocks.every(s=>s.used<=s.usable),'1D stock cut plus kerf does not exceed usable length');
+ok(!parsePaste('Only\t12\nGood\t12\t8\t2','sheet').ok,'paste missing columns gives row error');
+fs.rmSync('dist',{recursive:true,force:true});await import('./build.mjs');ok(fs.existsSync('dist/sitemap.xml')&&fs.existsSync('dist/robots.txt'),'sitemap and robots generated');const css=fs.readFileSync('src/styles.css','utf8');ok(css.includes('@media print')&&css.includes('@media(max-width:760px)'),'print and mobile CSS exist');const v=JSON.parse(fs.readFileSync('vercel.json','utf8'));ok(v.ignoreCommand==='node scripts/skip-old-vercel-builds.mjs','vercel ignoreCommand configured');console.log('StockCut validation passed.');
