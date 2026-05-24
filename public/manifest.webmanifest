@@ -1,0 +1,10 @@
+{
+  "name": "StockCut",
+  "short_name": "StockCut",
+  "description": "Local-first sheet and linear cut list optimizer with kerf, printable layouts, and CSV/JSON export.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f1e8",
+  "theme_color": "#7a4f2c",
+  "icons": []
+}

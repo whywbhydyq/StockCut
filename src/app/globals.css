@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+body { @apply bg-[#f7f1e8] text-stock-ink antialiased; }
+a { @apply underline-offset-4 hover:underline; }
+input, select, textarea { @apply w-full rounded-xl border border-stock-line bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-stock-accent; }
+button { @apply min-h-11 rounded-xl px-4 py-2 text-sm font-bold transition; }
+.tool-card { @apply rounded-3xl border border-stock-line bg-stock-paper p-5 shadow-sm; }
+.print-safe { break-inside: avoid; page-break-inside: avoid; }
+@media print {
+  header, footer, .no-print, .ad-slot, .guide-card { display: none !important; }
+  body { background: white !important; }
+  .tool-card { border: 1px solid #999; box-shadow: none; break-inside: avoid; page-break-inside: avoid; }
+  svg { max-height: 7.4in; break-inside: avoid; page-break-inside: avoid; }
+}
+@media (max-width: 640px) {
+  .tool-card { border-radius: 1rem; padding: 1rem; }
+  button { width: 100%; }
+  table { font-size: 0.8125rem; }
+}
+
+.shop-mode body { font-size: 18px; }
+.shop-mode button { min-height: 3.25rem; font-size: 1rem; }
+.shop-mode .tool-card { border-width: 2px; }
+@page { size: auto; margin: 0.55in; }
+@media print {
+  .affiliate-slot { display: none !important; }
+  .print-title::after { content: ' · Print/PDF shop sheet'; font-weight: 400; }
+}

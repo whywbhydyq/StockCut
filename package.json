@@ -1,0 +1,34 @@
+{
+  "name": "stockcut",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "tsc --noEmit && node scripts/validate-site.mjs",
+    "test": "vitest run && node scripts/validate-site.mjs",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@playwright/test": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "autoprefixer": "latest",
+    "postcss": "latest",
+    "tailwindcss": "^3.4.17",
+    "typescript": "latest",
+    "vitest": "latest"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
