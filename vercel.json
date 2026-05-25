@@ -1,4 +1,0 @@
-{
-  "ignoreCommand": "node scripts/skip-old-vercel-builds.mjs",
-  "framework": "nextjs"
-}
