@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+body { @apply bg-[#f7f1e8] text-stock-ink antialiased; }
+a { @apply underline-offset-4 hover:underline; }
+input, select, textarea { @apply w-full rounded-xl border border-stock-line bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-stock-accent; }
+button { @apply min-h-11 rounded-xl px-4 py-2 text-sm font-bold transition; }
+.tool-card { @apply rounded-3xl border border-stock-line bg-stock-paper p-5 shadow-sm; }
+.print-safe { break-inside: avoid; page-break-inside: avoid; }
+@media print {
+  header, footer, .no-print, .ad-slot, .guide-card { display: none !important; }
+  body { background: white !important; }
+  .tool-card { border: 1px solid #999; box-shadow: none; break-inside: avoid; page-break-inside: avoid; }
+  svg { max-height: 7.4in; break-inside: avoid; page-break-inside: avoid; }
+}
+@media (max-width: 640px) {
+  .tool-card { border-radius: 1rem; padding: 1rem; }
+  button { width: 100%; }
+  table { font-size: 0.8125rem; }
+}
+
+.shop-mode body { font-size: 18px; }
+.shop-mode button { min-height: 3.25rem; font-size: 1rem; }
+.shop-mode .tool-card { border-width: 2px; }
+@page { size: auto; margin: 0.55in; }
+@media print {
+  .affiliate-slot { display: none !important; }
+  .print-title::after { content: ' · Print/PDF shop sheet'; font-weight: 400; }
+}
+
+@layer components {
+  .app-workspace { @apply rounded-[1.75rem] border border-[#d8c7b6] bg-[#fbf6ec] p-4 shadow-[0_18px_45px_rgba(75,55,40,0.10)] md:p-5; }
+  .workspace-grid { @apply grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]; }
+  .workspace-panel { @apply rounded-2xl border border-stock-line bg-white/90 p-4 shadow-sm; }
+  .workspace-surface { @apply rounded-2xl border border-[#d0bca7] bg-[#fffaf2] p-4; }
+  .result-focus { @apply rounded-2xl border border-[#b7caa9] bg-[#f4fbef] p-4 shadow-sm; }
+  .result-empty { @apply grid min-h-56 place-items-center rounded-2xl border border-dashed border-[#c7b49d] bg-white/70 p-6 text-center text-stock-muted; }
+  .btn-primary { @apply bg-stock-accent text-white shadow-sm hover:shadow-md focus:ring-2 focus:ring-stock-accent focus:ring-offset-2; }
+  .btn-secondary { @apply bg-[#eee5d8] text-stock-ink hover:bg-[#e4d6c4] focus:ring-2 focus:ring-[#cdb79c] focus:ring-offset-2; }
+  .btn-danger { @apply bg-red-50 text-red-700 hover:bg-red-100 focus:ring-2 focus:ring-red-300 focus:ring-offset-2; }
+  .status-info { @apply rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900; }
+  .status-warning { @apply rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900; }
+  .status-danger { @apply rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800; }
+}
