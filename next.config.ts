@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
       { source: '/calculators/4x8-plywood-cut-list-optimizer', destination: '/4x8-plywood-cut-list-optimizer', permanent: true },
       { source: '/calculators/plywood-cutting-layout-calculator', destination: '/plywood-cutting-layout-calculator', permanent: true },
       { source: '/guides/saw-kerf-explained', destination: '/how-to-account-for-saw-kerf', permanent: true },
+      { source: '/saw-kerf-explained', destination: '/how-to-account-for-saw-kerf', permanent: true },
       { source: '/why-two-24-inch-panels-do-not-fit-on-48-inch-sheet', destination: '/why-two-24-inch-panels-do-not-fit-on-a-48-inch-sheet', permanent: true },
       { source: '/calculators/mdf-sheet-cut-calculator', destination: '/mdf-sheet-cut-calculator', permanent: true },
       { source: '/calculators/acrylic-sheet-cutting-layout-tool', destination: '/acrylic-sheet-cutting-layout-tool', permanent: true },
