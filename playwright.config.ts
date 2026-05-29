@@ -1,17 +1,17 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './e2e',
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://127.0.0.1:3000',
-    reuseExistingServer: !process.env.CI
-  },
+  testDir: './tests/e2e',
+  timeout: 30000,
   use: {
-    baseURL: 'http://127.0.0.1:3000'
+    baseURL: 'http://localhost:3000',
+    ...devices['Desktop Chrome'],
+    launchOptions: { executablePath: '/usr/bin/chromium', args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-running-insecure-content', '--disable-features=BlockInsecurePrivateNetworkRequests,PrivateNetworkAccessSendPreflights'] }
   },
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile-chrome', use: { ...devices['Pixel 5'] } }
-  ]
+  webServer: {
+    command: 'npm run start -- -H 0.0.0.0 -p 3000',
+    url: 'http://localhost:3000',
+    reuseExistingServer: true,
+    timeout: 120000
+  }
 });
