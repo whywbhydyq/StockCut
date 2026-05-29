@@ -15,8 +15,8 @@ import { loadProject, saveProject } from '@/core/storage/projectStorage';
 import { buildShareUrl } from '@/core/storage/shareProject';
 import { trackEvent } from '@/core/analytics/trackEvent';
 
-const SHEET_STORAGE_KEY = 'home-sheet-workspace-v1';
-const LINEAR_STORAGE_KEY = 'home-linear-workspace-v1';
+const SHEET_STORAGE_KEY = 'home-sheet-workspace-v3';
+const LINEAR_STORAGE_KEY = 'home-linear-workspace-v3';
 
 type HomeMode = 'sheet' | 'lumber' | 'tube';
 type ActiveResult =
@@ -126,7 +126,6 @@ function ExampleSheetPreview({ mode }: { mode: HomeMode }) {
         <span className="part part-c" />
         <span className="part part-d" />
         <span className="part part-e" />
-        <span className="home-example-label">Example sheet preview</span>
       </div>
       <div className="home-dim-x"><span /> <strong>96 in</strong> <span /></div>
     </div>
@@ -178,7 +177,7 @@ function IconButton({ children, disabled, onClick }: { children: ReactNode; disa
 export function StockCutHomeWorkspace() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [mode, setMode] = useState<HomeMode>('sheet');
-  const [sheetProject, setSheetProject] = useState<SheetProjectInput>(() => cloneProject(sheetPresets['imperial-sheet']));
+  const [sheetProject, setSheetProject] = useState<SheetProjectInput>(() => cloneProject(sheetPresets['plywood-4x8']));
   const [linearProject, setLinearProject] = useState<LinearProjectInput>(() => cloneProject(linearPresets['lumber-length']));
   const [result, setResult] = useState<ActiveResult>(null);
   const [error, setError] = useState<string | null>(null);
@@ -187,7 +186,7 @@ export function StockCutHomeWorkspace() {
   const [pendingImport, setPendingImport] = useState<ImportPreview>(null);
 
   useEffect(() => {
-    setSheetProject(loadProject(SHEET_STORAGE_KEY, cloneProject(sheetPresets['imperial-sheet'])));
+    setSheetProject(loadProject(SHEET_STORAGE_KEY, cloneProject(sheetPresets['plywood-4x8'])));
     setLinearProject(loadProject(LINEAR_STORAGE_KEY, cloneProject(linearPresets['lumber-length'])));
   }, []);
 
@@ -196,7 +195,7 @@ export function StockCutHomeWorkspace() {
       const hash = window.location.hash;
       if (hash === '#linear') setMode('lumber');
       if (hash === '#tube') setMode('tube');
-      if (hash === '#sheet' || hash === '') setMode((current) => current);
+      if (hash === '#sheet' || hash === '') setMode('sheet');
     };
     syncModeFromHash();
     window.addEventListener('hashchange', syncModeFromHash);
@@ -510,31 +509,34 @@ export function StockCutHomeWorkspace() {
 
       <section className="home-bottom-grid" id="examples">
         <div className="home-bottom-card">
-          <h3>Exports and shop output</h3><p>Print, PDF, CSV, share link, DXF and more</p>
-          <div className="home-export-grid">
-            <IconButton disabled={!hasResult} onClick={() => window.print()}>▣ Print / Save PDF</IconButton>
-            <IconButton disabled={!hasResult} onClick={downloadPdf}>⇩ Download PDF</IconButton>
-            <IconButton disabled={!hasResult} onClick={exportCsv}>▤ Export CSV</IconButton>
-            <IconButton disabled={!hasResult} onClick={copySummary}>▢ Copy summary</IconButton>
-            <IconButton disabled={!hasResult} onClick={copyShareLink}>↗ Copy share link</IconButton>
-            <IconButton disabled={!isSheetResult} onClick={() => result?.kind === 'sheet' && downloadSheetDxf(result.result)}>DXF Download</IconButton>
-          </div>
-          <details className="home-more"><summary>More exports</summary><button type="button" onClick={exportJson}>Download project JSON</button></details>
+          <h3>Exports and shop output</h3><p>{hasResult ? 'Print, PDF, CSV, share link, DXF and more' : 'Generate a layout first, then print or export your cut list.'}</p>
+          {hasResult ? (
+            <>
+              <div className="home-export-grid">
+                <IconButton onClick={() => window.print()}>▣ Print / Save PDF</IconButton>
+                <IconButton onClick={downloadPdf}>⇩ Download PDF</IconButton>
+                <IconButton onClick={exportCsv}>▤ Export CSV</IconButton>
+                <IconButton onClick={copySummary}>▢ Copy summary</IconButton>
+                <IconButton onClick={copyShareLink}>↗ Copy share link</IconButton>
+                <IconButton disabled={!isSheetResult} onClick={() => result?.kind === 'sheet' && downloadSheetDxf(result.result)}>DXF Download</IconButton>
+              </div>
+              <details className="home-more"><summary>More exports</summary><button type="button" onClick={exportJson}>Download project JSON</button></details>
+            </>
+          ) : <div className="home-bottom-inline">Print / PDF · CSV · Share link · DXF unlock after Generate</div>}
         </div>
         <div className="home-bottom-card">
-          <h3>Advanced controls</h3><p>Strategy, grain direction, trim, edge banding, offcuts, and more</p>
-          <div className="home-advanced-grid">
-            <label>Strategy<select value={activeProject.strategy ?? 'least_waste'} onChange={(event) => isLinearMode(mode) ? setLinearProject((project) => ({ ...project, strategy: event.target.value as LinearProjectInput['strategy'] })) : setSheetProject((project) => ({ ...project, strategy: event.target.value as SheetProjectInput['strategy'] }))}><option value="least_waste">Least waste</option><option value="least_stock">Least stock</option><option value="fewer_cuts">Fewer cuts</option></select></label>
-            {!isLinearMode(mode) && <label>Grain direction<select value={sheetProject.stock.grainDirection ?? 'none'} onChange={(event) => updateSheetStock({ grainDirection: event.target.value as SheetProjectInput['stock']['grainDirection'] })}><option value="none">None</option><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label>}
-            <button type="button" onClick={() => alert('Trim margins, edge banding, extra stock, offcut library, and manual adjustment are kept in the full optimizer pages. This homepage keeps them below the main workflow so first-time users can start quickly.')}>Open advanced notes</button>
-            <button type="button" onClick={exportJson}>Project import / export</button>
-          </div>
-          <small>Kerf, units, decimals, trim margins and offcuts stay available without blocking the first calculation.</small>
+          <h3>Advanced controls</h3><p>Strategy, grain direction, trim, offcuts, project import/export</p>
+          <details className="home-more"><summary>Open advanced controls</summary>
+            <div className="home-advanced-grid">
+              <label>Strategy<select value={activeProject.strategy ?? 'least_waste'} onChange={(event) => isLinearMode(mode) ? setLinearProject((project) => ({ ...project, strategy: event.target.value as LinearProjectInput['strategy'] })) : setSheetProject((project) => ({ ...project, strategy: event.target.value as SheetProjectInput['strategy'] }))}><option value="least_waste">Least waste</option><option value="least_stock">Least stock</option><option value="fewer_cuts">Fewer cuts</option></select></label>
+              {!isLinearMode(mode) && <label>Grain direction<select value={sheetProject.stock.grainDirection ?? 'none'} onChange={(event) => updateSheetStock({ grainDirection: event.target.value as SheetProjectInput['stock']['grainDirection'] })}><option value="none">None</option><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label>}
+              <button type="button" onClick={exportJson}>Project import / export</button>
+            </div>
+          </details>
         </div>
         <div className="home-bottom-card">
-          <h3>Help and resources</h3><p>How it works, tips, and examples</p>
+          <h3>Help and resources</h3><p>How it works, examples, FAQ</p>
           <div className="home-help-buttons"><button type="button" onClick={() => setPasteOpen(true)}>How it works</button><button type="button" onClick={loadSheetSample}>Examples</button><button type="button" onClick={() => alert('StockCut runs in your browser. It creates practical cut lists for rectangular sheet goods and straight stock. It is not CNC toolpath software.')}>FAQ</button></div>
-          <div className="home-tip">Tip: Start with a sample, then tweak parts or settings to improve yield.</div>
         </div>
       </section>
 

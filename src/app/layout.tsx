@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Script from 'next/script';
 import { PwaRegister } from '@/components/common/PwaRegister';
+import { HomeHeader } from '@/components/home/HomeHeader';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -11,12 +12,6 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
   manifest: '/manifest.webmanifest'
 };
-
-function LogoMark() {
-  return (
-    <span className="grid h-9 w-9 place-items-center rounded-lg bg-blue-600 text-lg font-black text-white shadow-sm" aria-hidden="true">S</span>
-  );
-}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -32,18 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           strategy="afterInteractive"
         />
         <PwaRegister />
-        <header className="home-site-header">
-          <div className="home-site-header-inner">
-            <Link href="/" className="home-logo" aria-label="StockCut home"><LogoMark /><span>StockCut</span></Link>
-            <nav className="home-nav" aria-label="Primary navigation">
-              <Link href="/#sheet">Sheet</Link>
-              <Link href="/#linear">Linear</Link>
-              <Link href="/saw-kerf-calculator">Kerf</Link>
-              <Link href="/#examples">Examples</Link>
-              <Link href="/#import">↥ Import</Link>
-            </nav>
-          </div>
-        </header>
+        <HomeHeader />
         {children}
         <footer className="mx-auto flex max-w-[1800px] flex-wrap justify-center gap-4 px-6 py-8 text-sm text-slate-500">
           <Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/disclaimer">Disclaimer</Link><Link href="/about">About</Link><Link href="/contact">Contact</Link>
