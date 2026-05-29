@@ -80,55 +80,55 @@ function iconForMode(mode: HomeMode) {
 
 function SummaryCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border-r border-slate-200 px-2 py-2 text-center last:border-r-0">
-      <span className="block text-[11px] font-medium text-slate-600">{label}</span>
-      <strong className="mt-0.5 block font-mono text-base font-semibold text-slate-950">{value}</strong>
+    <div className="border-r border-slate-200 px-3 py-3 text-center last:border-r-0">
+      <span className="block text-[12px] font-medium text-slate-600">{label}</span>
+      <strong className="mt-1 block font-mono text-xl font-semibold text-slate-950">{value}</strong>
     </div>
   );
 }
 
 function StatusChip({ title, value, active }: { title: string; value: string; active: boolean }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
-      <span className={active ? 'grid h-7 w-7 place-items-center rounded-lg bg-emerald-50 text-sm text-emerald-700' : 'grid h-7 w-7 place-items-center rounded-lg bg-slate-50 text-sm text-slate-500'}>
+    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <span className={active ? 'grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-700' : 'grid h-9 w-9 place-items-center rounded-xl bg-slate-50 text-slate-500'}>
         {active ? '✓' : '○'}
       </span>
       <span>
-        <strong className="block text-xs text-slate-950">{title}</strong>
-        <span className="text-[11px] text-slate-500">{value}</span>
+        <strong className="block text-sm text-slate-950">{title}</strong>
+        <span className="text-xs text-slate-500">{value}</span>
       </span>
     </div>
   );
 }
 
 function ExampleSheetPreview({ mode }: { mode: HomeMode }) {
-  const linear = isLinearMode(mode);
-  return (
-    <div className={`home-example-preview ${linear ? 'is-linear' : 'is-sheet'}`}>
-      <div className="home-example-dimension home-example-dimension-y">{linear ? 'stock' : '48 in'}</div>
-      <div className="home-example-canvas" aria-hidden="true">
-        {linear ? (
-          <>
-            <span className="segment s1" />
-            <span className="segment s2" />
-            <span className="segment s3" />
-            <span className="segment waste" />
-          </>
-        ) : (
-          <>
-            <span className="part p1" />
-            <span className="part p2" />
-            <span className="part p3" />
-            <span className="part p4" />
-            <span className="part p5" />
-          </>
-        )}
-        <div className="home-example-copy">
-          <strong>{linear ? 'Example stock preview' : 'Example sheet preview'}</strong>
-          <span>Generated layout will use your parts</span>
+  const isLinear = isLinearMode(mode);
+  if (isLinear) {
+    return (
+      <div className="home-example-preview home-example-linear" aria-label="Example straight stock preview">
+        <div className="home-example-linear-bar">
+          <span className="segment segment-a" />
+          <span className="segment segment-b" />
+          <span className="segment segment-c" />
+          <span className="segment segment-waste" />
         </div>
+        <div className="home-example-caption"><span>0 in</span><strong>{mode === 'tube' ? '120 in' : '96 in'}</strong></div>
       </div>
-      <div className="home-example-dimension home-example-dimension-x">{linear ? (mode === 'tube' ? '120 in' : '96 in') : '96 in'}</div>
+    );
+  }
+
+  return (
+    <div className="home-example-preview home-example-sheet" aria-label="Example sheet preview">
+      <span className="home-dim-y">48 in</span>
+      <div className="home-example-board">
+        <span className="part part-a" />
+        <span className="part part-b" />
+        <span className="part part-c" />
+        <span className="part part-d" />
+        <span className="part part-e" />
+        <span className="home-example-label">Example sheet preview</span>
+      </div>
+      <div className="home-dim-x"><span /> <strong>96 in</strong> <span /></div>
     </div>
   );
 }
@@ -191,34 +191,20 @@ export function StockCutHomeWorkspace() {
     setLinearProject(loadProject(LINEAR_STORAGE_KEY, cloneProject(linearPresets['lumber-length'])));
   }, []);
 
+  useEffect(() => {
+    const syncModeFromHash = () => {
+      const hash = window.location.hash;
+      if (hash === '#linear') setMode('lumber');
+      if (hash === '#tube') setMode('tube');
+      if (hash === '#sheet' || hash === '') setMode((current) => current);
+    };
+    syncModeFromHash();
+    window.addEventListener('hashchange', syncModeFromHash);
+    return () => window.removeEventListener('hashchange', syncModeFromHash);
+  }, []);
+
   useEffect(() => saveProject(SHEET_STORAGE_KEY, sheetProject), [sheetProject]);
   useEffect(() => saveProject(LINEAR_STORAGE_KEY, linearProject), [linearProject]);
-
-  useEffect(() => {
-    const applyHashMode = () => {
-      const hash = window.location.hash.toLowerCase();
-      if (hash === '#linear' || hash === '#lumber') {
-        setMode('lumber');
-        setLinearProject(cloneProject(linearPresets['lumber-length']));
-        setResult(null);
-        setError(null);
-      }
-      if (hash === '#tube' || hash === '#pipe') {
-        setMode('tube');
-        setLinearProject(cloneProject(linearPresets['pvc-pipe']));
-        setResult(null);
-        setError(null);
-      }
-      if (hash === '#sheet') {
-        setMode('sheet');
-        setResult(null);
-        setError(null);
-      }
-    };
-    applyHashMode();
-    window.addEventListener('hashchange', applyHashMode);
-    return () => window.removeEventListener('hashchange', applyHashMode);
-  }, []);
 
   const activeProject = isLinearMode(mode) ? linearProject : sheetProject;
   const isSheetResult = result?.kind === 'sheet';
@@ -507,14 +493,14 @@ export function StockCutHomeWorkspace() {
 
         <section className="home-panel home-preview-panel">
           <div className="home-panel-title"><span>2</span><h2>See the layout before you cut</h2></div>
-          <div className="home-preview-callout"><strong>{hasResult ? 'Optimized layout preview' : 'Preview will appear here after calculation'}</strong><span>{hasResult ? 'Review the first layout, then print or export your shop output.' : 'Example preview'}</span></div>
+          <div className="home-preview-callout"><strong>{hasResult ? 'Optimized layout preview' : 'Preview will appear here after calculation'}</strong><span>{hasResult ? 'Review the first layout, then print or export.' : 'Example preview, not your result yet'}</span></div>
           {result?.kind === 'sheet' && <SheetResultPreview result={result.result} unit={sheetProject.unit} />}
           {result?.kind === 'linear' && <LinearResultPreview result={result.result} unit={linearProject.unit} />}
           {!result && <ExampleSheetPreview mode={mode} />}
           <div className="home-summary-grid">{summary.map(([label, value]) => <SummaryCell key={label} label={label} value={value} />)}</div>
           <div className="home-status-grid">
             <StatusChip title="Printable cut list" value={hasResult ? 'Ready' : 'Ready after calculation'} active={hasResult} />
-            <StatusChip title="Cut sequence" value={hasResult ? 'Generated' : 'Generated after calculation'} active={hasResult} />
+            <StatusChip title="Cut sequence" value={hasResult ? 'Generated' : 'After calculation'} active={hasResult} />
             <StatusChip title="Share link" value={hasResult ? 'Available' : 'Available after calculation'} active={hasResult} />
           </div>
         </section>
