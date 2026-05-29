@@ -6,8 +6,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://stockcut.ymirtool.com'),
-  title: { default: 'StockCut — Free Cut List Optimizer', template: '%s — StockCut' },
-  description: 'Free local-first sheet and linear cut list optimizer with kerf, labels, printable layouts, CSV/JSON export, and browser-only processing.',
+  title: { default: 'Free Cut List Optimizer with Kerf - StockCut', template: '%s - StockCut' },
+  description: 'Optimize sheet and linear stock cuts with kerf, labels, waste, offcuts, and printable layouts. Works locally for plywood, MDF, lumber, tube, and pipe.',
   alternates: { canonical: '/' },
   manifest: '/manifest.webmanifest'
 };
