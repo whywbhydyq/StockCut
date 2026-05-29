@@ -1,4 +1,5 @@
 {
-  "ignoreCommand": "node scripts/skip-old-vercel-builds.mjs",
-  "framework": "nextjs"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "ignoreCommand": "bash -c 'latest=$(git ls-remote origin refs/heads/main | cut -f1); test \"$VERCEL_GIT_COMMIT_REF\" = main && test -n \"$VERCEL_GIT_COMMIT_SHA\" && test -n \"$latest\" && test \"$VERCEL_GIT_COMMIT_SHA\" != \"$latest\"'"
 }

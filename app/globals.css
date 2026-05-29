@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: #f6f8fb;
+  color: #142033;
+}
+
+a {
+  color: #1d4ed8;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

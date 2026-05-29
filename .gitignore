@@ -1,10 +1,7 @@
-node_modules/
-.next/
-out/
-dist/
-.vercel/
-.DS_Store
-*.log
+node_modules
+.vercel
 .env*
-coverage/
-tsconfig.tsbuildinfo
+dist
+coverage
+.DS_Store
+npm-debug.log*

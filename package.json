@@ -1,35 +1,36 @@
 {
-  "name": "stockcut",
-  "version": "1.0.0",
+  "name": "hvac-tool-site",
+  "version": "2.0.1",
   "private": true,
   "type": "module",
-  "packageManager": "npm@10.9.2",
+  "description": "Next.js App Router HVAC calculator hub for AC BTU, dehumidifier sizing, CFM, ACH, bathroom fan sizing, garage ventilation, and HVAC unit conversions.",
   "scripts": {
     "dev": "next dev",
-    "build": "npm run typecheck && next build --no-lint",
+    "build": "next build",
     "start": "next start",
-    "lint": "npm run typecheck && node scripts/validate-site.mjs",
-    "test": "vitest run && node scripts/validate-site.mjs",
-    "e2e": "playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check": "npm run typecheck && npm run test && npm run build"
   },
+  "engines": { "node": "20.x" },
   "dependencies": {
-    "next": "15.5.9",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "next": "^14.2.23",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zod": "^3.25.0"
   },
   "devDependencies": {
-    "@playwright/test": "1.56.1",
-    "@types/node": "22.13.14",
-    "@types/react": "19.1.8",
-    "@types/react-dom": "19.1.6",
-    "autoprefixer": "10.4.20",
-    "postcss": "8.4.49",
-    "tailwindcss": "3.4.17",
-    "typescript": "5.7.3",
-    "vitest": "2.1.8"
-  },
-  "engines": {
-    "node": "20.x"
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.23",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }
