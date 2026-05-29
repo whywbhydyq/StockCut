@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { DisplayUnit, LinearOptimizationResult, LinearPartInput, LinearProjectInput, SheetOptimizationResult, SheetPartInput, SheetProjectInput } from '@/core/types';
 import { sheetPresets, linearPresets } from '@/data/presets';
@@ -214,6 +215,7 @@ export function StockCutHomeWorkspace() {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [paste, setPaste] = useState('');
   const [pendingImport, setPendingImport] = useState<ImportPreview>(null);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
   useEffect(() => {
     setSheetProject(loadProject(SHEET_STORAGE_KEY, createHomeSheetProject()));
@@ -432,17 +434,22 @@ export function StockCutHomeWorkspace() {
     else void file.text().then((text) => { const parsed = parseSheetPaste(text); parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n')); }).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read CSV file.'));
   };
 
+  const markCopied = (key: string) => {
+    setCopyStatus(key);
+    window.setTimeout(() => setCopyStatus(null), 1600);
+  };
+
   const copySummary = () => {
     if (!result) return;
     const text = result.kind === 'sheet'
       ? `StockCut: ${result.result.sheetsUsed.length} sheets, yield ${formatPercent(result.result.yieldRate)}, waste ${formatPercent(result.result.wasteRate)}, unplaced ${result.result.unplacedParts.length}.`
       : `StockCut: ${result.result.stocksUsed.length} stock lengths, waste ${formatPercent(result.result.wasteRate)}, unplaced ${result.result.unplacedCuts.length}.`;
-    void navigator.clipboard.writeText(text);
+    void navigator.clipboard.writeText(text).then(() => markCopied('summary'));
   };
 
   const copyShareLink = () => {
     const link = isLinearMode(mode) ? buildShareUrl('linear-1d', linearProject) : buildShareUrl('sheet-2d', sheetProject);
-    void navigator.clipboard.writeText(link);
+    void navigator.clipboard.writeText(link).then(() => markCopied('share'));
     trackEvent('share_link_created', { mode: isLinearMode(mode) ? 'linear' : 'sheet', source: 'home' });
   };
 
@@ -592,8 +599,8 @@ export function StockCutHomeWorkspace() {
                 <IconButton onClick={() => window.print()}>▣ Print / Save PDF</IconButton>
                 <IconButton onClick={downloadPdf}>⇩ Download PDF</IconButton>
                 <IconButton onClick={exportCsv}>▤ Export CSV</IconButton>
-                <IconButton onClick={copySummary}>▢ Copy summary</IconButton>
-                <IconButton onClick={copyShareLink}>↗ Copy share link</IconButton>
+                <IconButton onClick={copySummary}>▢ {copyStatus === 'summary' ? 'Copied summary' : 'Copy summary'}</IconButton>
+                <IconButton onClick={copyShareLink}>↗ {copyStatus === 'share' ? 'Copied link' : 'Copy share link'}</IconButton>
                 <IconButton disabled={!isSheetResult} onClick={() => result?.kind === 'sheet' && downloadSheetDxf(result.result)}>DXF Download</IconButton>
               </div>
               <details className="sc4-more"><summary>More exports</summary><button type="button" onClick={exportJson}>Download project JSON</button></details>
@@ -612,7 +619,21 @@ export function StockCutHomeWorkspace() {
         </div>
         <div className="sc4-bottom-card">
           <h3>Help and resources</h3><p>How it works, examples, FAQ</p>
-          <div className="sc4-help-buttons"><button type="button" onClick={() => document.querySelector('.sc4-how')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>How it works</button><button type="button" onClick={() => isLinearMode(mode) ? loadLinearSample(mode === 'tube' ? 'pvc-pipe' : 'lumber-length') : loadSheetSample()}>Examples</button><button type="button" onClick={() => alert('StockCut runs in your browser. It creates practical cut lists for rectangular sheet goods and straight stock. It is not CNC toolpath software.')}>FAQ</button></div>
+          <div className="sc4-help-buttons"><button type="button" onClick={() => document.querySelector('.sc4-how')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>How it works</button><button type="button" onClick={() => isLinearMode(mode) ? loadLinearSample(mode === 'tube' ? 'pvc-pipe' : 'lumber-length') : loadSheetSample()}>Examples</button><Link href="/how-to-account-for-saw-kerf">Kerf FAQ</Link><Link href="/cut-list-optimizer-vs-excel">Cut list FAQ</Link></div>
+        </div>
+      </section>
+
+
+      <section className="sc4-seo-links" aria-label="Popular cut list calculators">
+        <h2>Popular cut list calculators</h2>
+        <div>
+          <a href="/4x8-plywood-cut-list-optimizer">4x8 plywood cut list optimizer</a>
+          <a href="/sheet-cutting-optimizer">Sheet cutting optimizer</a>
+          <a href="/linear-cutting-optimizer">Linear cutting optimizer</a>
+          <a href="/pvc-pipe-cutting-optimizer">PVC pipe cutting optimizer</a>
+          <a href="/lumber-length-cutting-optimizer">Lumber length cutting optimizer</a>
+          <a href="/steel-tube-cutting-optimizer">Steel tube cutting optimizer</a>
+          <a href="/saw-kerf-calculator">Saw kerf calculator</a>
         </div>
       </section>
 

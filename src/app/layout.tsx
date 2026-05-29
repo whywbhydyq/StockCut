@@ -5,11 +5,25 @@ import { PwaRegister } from '@/components/common/PwaRegister';
 import { HomeHeader } from '@/components/home/HomeHeader';
 import './globals.css';
 
+const siteDescription = 'Optimize sheet and linear stock cuts with kerf, labels, waste, offcuts, and printable layouts. Works locally for plywood, MDF, lumber, tube, and pipe.';
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://stockcut.ymirtool.com'),
   title: { default: 'Cut List Optimizer for Sheet Goods, Boards, Pipe, and Tube - StockCut', template: '%s - StockCut' },
-  description: 'Optimize sheet and linear stock cuts with kerf, labels, waste, offcuts, and printable layouts. Works locally for plywood, MDF, lumber, tube, and pipe.',
+  description: siteDescription,
   alternates: { canonical: '/' },
+  openGraph: {
+    title: 'Cut List Optimizer for Sheet Goods, Boards, Pipe, and Tube - StockCut',
+    description: siteDescription,
+    url: 'https://stockcut.ymirtool.com',
+    siteName: 'StockCut',
+    type: 'website'
+  },
+  twitter: {
+    card: 'summary',
+    title: 'StockCut Cut List Optimizer',
+    description: siteDescription
+  },
   manifest: '/manifest.webmanifest'
 };
 

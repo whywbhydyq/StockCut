@@ -11,9 +11,9 @@ const canonicalSlugs = new Set([
   '/cabinet-cut-list-optimizer',
   '/pvc-pipe-cutting-optimizer',
   '/lumber-length-cutting-optimizer',
-  '/guides/how-to-account-for-saw-kerf',
-  '/guides/why-two-24-inch-panels-do-not-fit-on-a-48-inch-sheet',
-  '/guides/reduce-plywood-waste',
+  '/how-to-account-for-saw-kerf',
+  '/why-two-24-inch-panels-do-not-fit-on-a-48-inch-sheet',
+  '/reduce-plywood-waste',
   '/privacy',
   '/terms',
   '/disclaimer',
@@ -26,7 +26,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     .filter((page) => canonicalSlugs.has(page.slug))
     .map((page) => ({
       url: `${siteUrl}${page.slug === '/' ? '' : page.slug}`,
-      lastModified: new Date('2026-05-24'),
+      lastModified: new Date('2026-05-30'),
       changeFrequency: page.kind === 'guide' ? 'monthly' : 'weekly',
       priority: page.slug === '/' ? 1 : page.kind === 'sheet' || page.kind === 'linear' ? 0.9 : 0.6
     }));

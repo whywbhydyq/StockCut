@@ -1791,3 +1791,38 @@ footer {
     white-space: nowrap;
   }
 }
+
+.sc4-seo-links {
+  margin-top: 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  background: rgba(255,255,255,.86);
+  padding: 14px 16px;
+}
+.sc4-seo-links h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #0f172a;
+}
+.sc4-seo-links div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sc4-seo-links a {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #fff;
+  color: #1e40af;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.sc4-seo-links a:hover { border-color: #2563eb; background: #eff6ff; }
+
+
+/* First-stage v2: remove fake FAQ alert and show copy feedback-ready controls */
+.sc4-help-buttons a{display:inline-flex;min-height:34px;align-items:center;justify-content:center;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#1d4ed8;padding:7px 10px;font-size:13px;font-weight:800;text-decoration:none}
+.sc4-help-buttons a:hover{border-color:#60a5fa;background:#eff6ff;text-decoration:none}
+.sc4-seo-links{margin-top:14px}
