@@ -28,16 +28,22 @@ export function HomeHeader() {
   const isHome = pathname === '/';
   const active = isHome ? hash : pathname;
 
+  const openImport = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('stockcut:open-import'));
+    }
+  };
+
   return (
-    <header className="home-site-header">
-      <div className="home-site-header-inner">
-        <Link href="/" className="home-logo" aria-label="StockCut home"><LogoMark /><span>StockCut</span></Link>
-        <nav className="home-nav" aria-label="Primary navigation">
+    <header className="sc4-site-header">
+      <div className="sc4-site-header-inner">
+        <Link href="/" className="sc4-logo" aria-label="StockCut home"><LogoMark /><span>StockCut</span></Link>
+        <nav className="sc4-nav" aria-label="Primary navigation">
           <Link href="/#sheet" className={navClass(isHome && (active === '#sheet' || active === ''))}>Sheet</Link>
           <Link href="/#linear" className={navClass(isHome && active === '#linear')}>Linear</Link>
           <Link href="/saw-kerf-calculator" className={navClass(pathname === '/saw-kerf-calculator')}>Kerf</Link>
           <Link href="/#examples" className={navClass(isHome && active === '#examples')}>Examples</Link>
-          <Link href="/#import" className={navClass(isHome && active === '#import')}>↥ Import</Link>
+          <Link href="/#import" onClick={openImport} className={navClass(isHome && active === '#import')}>↥ Import</Link>
         </nav>
       </div>
     </header>

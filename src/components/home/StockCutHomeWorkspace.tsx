@@ -15,8 +15,8 @@ import { loadProject, saveProject } from '@/core/storage/projectStorage';
 import { buildShareUrl } from '@/core/storage/shareProject';
 import { trackEvent } from '@/core/analytics/trackEvent';
 
-const SHEET_STORAGE_KEY = 'home-sheet-workspace-v3';
-const LINEAR_STORAGE_KEY = 'home-linear-workspace-v3';
+const SHEET_STORAGE_KEY = 'sc6-sheet-workspace-v6';
+const LINEAR_STORAGE_KEY = 'sc6-linear-workspace-v6';
 
 type HomeMode = 'sheet' | 'lumber' | 'tube';
 type ActiveResult =
@@ -31,6 +31,21 @@ type ImportPreview =
 
 function cloneProject<T>(project: T): T {
   return JSON.parse(JSON.stringify(project)) as T;
+}
+
+
+function createHomeSheetProject(): SheetProjectInput {
+  const project = cloneProject(sheetPresets['imperial-sheet']);
+  delete project.extraStocks;
+  project.stock.cost = '';
+  return project;
+}
+
+function createHomeLinearProject(mode: HomeMode = 'lumber'): LinearProjectInput {
+  const project = cloneProject(linearPresets[mode === 'tube' ? 'pvc-pipe' : 'lumber-length']);
+  delete project.extraStocks;
+  project.stock.cost = '';
+  return project;
 }
 
 function newId(prefix: string): string {
@@ -105,29 +120,29 @@ function ExampleSheetPreview({ mode }: { mode: HomeMode }) {
   const isLinear = isLinearMode(mode);
   if (isLinear) {
     return (
-      <div className="home-example-preview home-example-linear" aria-label="Example straight stock preview">
-        <div className="home-example-linear-bar">
+      <div className="sc4-example-preview sc4-example-linear" aria-label="Example straight stock preview">
+        <div className="sc4-example-linear-bar">
           <span className="segment segment-a" />
           <span className="segment segment-b" />
           <span className="segment segment-c" />
           <span className="segment segment-waste" />
         </div>
-        <div className="home-example-caption"><span>0 in</span><strong>{mode === 'tube' ? '120 in' : '96 in'}</strong></div>
+        <div className="sc4-example-caption"><span>0 in</span><strong>{mode === 'tube' ? '120 in' : '96 in'}</strong></div>
       </div>
     );
   }
 
   return (
-    <div className="home-example-preview home-example-sheet" aria-label="Example sheet preview">
-      <span className="home-dim-y">48 in</span>
-      <div className="home-example-board">
+    <div className="sc4-example-preview sc4-example-sheet" aria-label="Example sheet preview">
+      <span className="sc4-dim-y">48 in</span>
+      <div className="sc4-example-board">
         <span className="part part-a" />
         <span className="part part-b" />
         <span className="part part-c" />
         <span className="part part-d" />
         <span className="part part-e" />
       </div>
-      <div className="home-dim-x"><span /> <strong>96 in</strong> <span /></div>
+      <div className="sc4-dim-x"><span /> <strong>96 in</strong> <span /></div>
     </div>
   );
 }
@@ -135,20 +150,35 @@ function ExampleSheetPreview({ mode }: { mode: HomeMode }) {
 function SheetResultPreview({ result, unit }: { result: SheetOptimizationResult; unit: DisplayUnit }) {
   const sheet = result.sheetsUsed[0];
   if (!sheet) return <ExampleSheetPreview mode="sheet" />;
-  const scale = Math.min(100 / sheet.widthUm, 100 / sheet.heightUm);
+  const landscape = sheet.heightUm > sheet.widthUm;
+  const boardWidthUm = landscape ? sheet.heightUm : sheet.widthUm;
+  const boardHeightUm = landscape ? sheet.widthUm : sheet.heightUm;
+  const scale = Math.min(100 / boardWidthUm, 100 / boardHeightUm);
+  const mapRect = (rect: { xUm: number; yUm: number; widthUm: number; heightUm: number }) => landscape
+    ? { x: rect.yUm, y: rect.xUm, width: rect.heightUm, height: rect.widthUm }
+    : { x: rect.xUm, y: rect.yUm, width: rect.widthUm, height: rect.heightUm };
+  const usable = landscape
+    ? { x: sheet.usableYUm, y: sheet.usableXUm, width: sheet.usableHeightUm, height: sheet.usableWidthUm }
+    : { x: sheet.usableXUm, y: sheet.usableYUm, width: sheet.usableWidthUm, height: sheet.usableHeightUm };
   return (
-    <div className="mx-auto mt-5 max-w-3xl rounded-xl border border-slate-300 bg-white p-3">
-      <div className="mb-2 flex items-center justify-between text-xs text-slate-500"><span>Sheet {sheet.sheetIndex} of {result.sheetsUsed.length}</span><span>{formatDimension(sheet.widthUm, unit)} × {formatDimension(sheet.heightUm, unit)}</span></div>
-      <svg viewBox={`0 0 ${sheet.widthUm} ${sheet.heightUm}`} className="h-auto max-h-[260px] w-full rounded-lg bg-slate-50" role="img" aria-label="Optimized sheet layout preview">
-        <rect width={sheet.widthUm} height={sheet.heightUm} fill="#f8fafc" stroke="#334155" strokeWidth={1 / scale} />
-        <rect x={sheet.usableXUm} y={sheet.usableYUm} width={sheet.usableWidthUm} height={sheet.usableHeightUm} fill="none" stroke="#64748b" strokeDasharray={8 / scale} strokeWidth={1 / scale} />
-        {sheet.offcuts.slice(0, 30).map((offcut, index) => <rect key={index} x={offcut.xUm} y={offcut.yUm} width={offcut.widthUm} height={offcut.heightUm} fill="#e2e8f0" stroke="#cbd5e1" strokeWidth={1 / scale} />)}
-        {sheet.placements.map((part, index) => (
-          <g key={`${part.partId}-${part.instanceIndex}-${index}`}>
-            <rect x={part.xUm} y={part.yUm} width={part.widthUm} height={part.heightUm} rx={2 / scale} fill={index % 3 === 0 ? '#dcfce7' : index % 3 === 1 ? '#ffedd5' : '#e0f2fe'} stroke="#334155" strokeWidth={1 / scale} />
-            <text x={part.xUm + part.widthUm / 2} y={part.yUm + part.heightUm / 2} textAnchor="middle" dominantBaseline="middle" fontSize={Math.max(Math.min(part.widthUm, part.heightUm) / 7, 65000)} fill="#0f172a">{part.partLabel.slice(0, 18)}</text>
-          </g>
-        ))}
+    <div className="sc4-result-preview sc4-sheet-result">
+      <div className="sc4-result-meta"><span>Sheet {sheet.sheetIndex} of {result.sheetsUsed.length}</span><span>{formatDimension(boardWidthUm, unit)} × {formatDimension(boardHeightUm, unit)}</span></div>
+      <svg viewBox={`0 0 ${boardWidthUm} ${boardHeightUm}`} className="sc4-result-svg" role="img" aria-label="Optimized sheet layout preview">
+        <rect width={boardWidthUm} height={boardHeightUm} fill="#f8fafc" stroke="#334155" strokeWidth={1 / scale} />
+        <rect x={usable.x} y={usable.y} width={usable.width} height={usable.height} fill="none" stroke="#64748b" strokeDasharray={8 / scale} strokeWidth={1 / scale} />
+        {sheet.offcuts.slice(0, 30).map((offcut, index) => {
+          const rect = mapRect(offcut);
+          return <rect key={index} x={rect.x} y={rect.y} width={rect.width} height={rect.height} fill="#e2e8f0" stroke="#cbd5e1" strokeWidth={1 / scale} />;
+        })}
+        {sheet.placements.map((part, index) => {
+          const rect = mapRect(part);
+          return (
+            <g key={`${part.partId}-${part.instanceIndex}-${index}`}>
+              <rect x={rect.x} y={rect.y} width={rect.width} height={rect.height} rx={2 / scale} fill={index % 3 === 0 ? '#dcfce7' : index % 3 === 1 ? '#ffedd5' : '#e0f2fe'} stroke="#334155" strokeWidth={1 / scale} />
+              <text x={rect.x + rect.width / 2} y={rect.y + rect.height / 2} textAnchor="middle" dominantBaseline="middle" fontSize={Math.max(Math.min(rect.width, rect.height) / 7, 52000)} fill="#0f172a">{part.partLabel.slice(0, 16)}</text>
+            </g>
+          );
+        })}
       </svg>
     </div>
   );
@@ -158,27 +188,27 @@ function LinearResultPreview({ result, unit }: { result: LinearOptimizationResul
   const stock = result.stocksUsed[0];
   if (!stock) return <ExampleSheetPreview mode="lumber" />;
   return (
-    <div className="mx-auto mt-5 max-w-3xl rounded-xl border border-slate-300 bg-white p-4">
+    <div className="sc4-result-preview sc4-linear-result">
       <div className="mb-2 flex items-center justify-between text-xs text-slate-500"><span>Stock {stock.stockIndex} of {result.stocksUsed.length}</span><span>{formatDimension(stock.usableLengthUm, unit)} usable</span></div>
-      <div className="relative h-20 overflow-hidden rounded-xl border border-slate-400 bg-slate-100">
+      <div className="sc4-linear-result-bar">
         {stock.cuts.map((cut, index) => (
-          <div key={`${cut.partId}-${cut.instanceIndex}-${index}`} className="absolute top-0 grid h-full place-items-center border-x border-slate-500 bg-emerald-50 px-1 text-center text-xs font-semibold text-slate-900" style={{ left: `${(cut.startUm / stock.usableLengthUm) * 100}%`, width: `${(cut.lengthUm / stock.usableLengthUm) * 100}%` }}>{cut.partLabel}</div>
+          <div key={`${cut.partId}-${cut.instanceIndex}-${index}`} className="sc4-linear-result-cut" style={{ left: `${(cut.startUm / stock.usableLengthUm) * 100}%`, width: `${(cut.lengthUm / stock.usableLengthUm) * 100}%` }}>{cut.partLabel}</div>
         ))}
       </div>
-      <p className="mt-2 text-sm text-slate-500">Used {formatDimension(stock.usedLengthUm, unit)} · offcut {formatDimension(stock.wasteLengthUm, unit)} · kerf cuts {stock.kerfCount}</p>
+      <p className="sc4-result-note">Used {formatDimension(stock.usedLengthUm, unit)} · offcut {formatDimension(stock.wasteLengthUm, unit)} · kerf cuts {stock.kerfCount}</p>
     </div>
   );
 }
 
 function IconButton({ children, disabled, onClick }: { children: ReactNode; disabled?: boolean; onClick?: () => void }) {
-  return <button type="button" disabled={disabled} onClick={onClick} className="home-action-button">{children}</button>;
+  return <button type="button" disabled={disabled} onClick={onClick} className="sc4-action-button">{children}</button>;
 }
 
 export function StockCutHomeWorkspace() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [mode, setMode] = useState<HomeMode>('sheet');
-  const [sheetProject, setSheetProject] = useState<SheetProjectInput>(() => cloneProject(sheetPresets['plywood-4x8']));
-  const [linearProject, setLinearProject] = useState<LinearProjectInput>(() => cloneProject(linearPresets['lumber-length']));
+  const [sheetProject, setSheetProject] = useState<SheetProjectInput>(() => createHomeSheetProject());
+  const [linearProject, setLinearProject] = useState<LinearProjectInput>(() => createHomeLinearProject('lumber'));
   const [result, setResult] = useState<ActiveResult>(null);
   const [error, setError] = useState<string | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
@@ -186,20 +216,44 @@ export function StockCutHomeWorkspace() {
   const [pendingImport, setPendingImport] = useState<ImportPreview>(null);
 
   useEffect(() => {
-    setSheetProject(loadProject(SHEET_STORAGE_KEY, cloneProject(sheetPresets['plywood-4x8'])));
-    setLinearProject(loadProject(LINEAR_STORAGE_KEY, cloneProject(linearPresets['lumber-length'])));
+    setSheetProject(loadProject(SHEET_STORAGE_KEY, createHomeSheetProject()));
+    setLinearProject(loadProject(LINEAR_STORAGE_KEY, createHomeLinearProject('lumber')));
   }, []);
 
   useEffect(() => {
+    const resolveModeFromHash = (hash: string): HomeMode | null => {
+      if (hash === '#linear') return 'lumber';
+      if (hash === '#tube') return 'tube';
+      if (hash === '#sheet' || hash === '') return 'sheet';
+      return null;
+    };
     const syncModeFromHash = () => {
-      const hash = window.location.hash;
-      if (hash === '#linear') setMode('lumber');
-      if (hash === '#tube') setMode('tube');
-      if (hash === '#sheet' || hash === '') setMode('sheet');
+      const nextMode = resolveModeFromHash(window.location.hash);
+      if (!nextMode) return;
+      setMode((currentMode) => {
+        if (currentMode !== nextMode) {
+          setResult(null);
+          setError(null);
+          setPendingImport(null);
+          setPasteOpen(false);
+        }
+        return nextMode;
+      });
     };
     syncModeFromHash();
     window.addEventListener('hashchange', syncModeFromHash);
     return () => window.removeEventListener('hashchange', syncModeFromHash);
+  }, []);
+
+  useEffect(() => {
+    const openImport = () => {
+      setPasteOpen(true);
+      setPendingImport(null);
+      setError(null);
+      window.requestAnimationFrame(() => fileInputRef.current?.click());
+    };
+    window.addEventListener('stockcut:open-import', openImport);
+    return () => window.removeEventListener('stockcut:open-import', openImport);
   }, []);
 
   useEffect(() => saveProject(SHEET_STORAGE_KEY, sheetProject), [sheetProject]);
@@ -231,20 +285,30 @@ export function StockCutHomeWorkspace() {
     return [['Sheets used', '—'], ['Yield', '—'], ['Waste', '—'], ['Unplaced', '—'], ['Est. stock cost', '—']];
   }, [result]);
 
+  const clearOutput = () => {
+    setResult(null);
+    setError(null);
+  };
+
   const setModeAndPreset = (nextMode: HomeMode) => {
     setMode(nextMode);
     setResult(null);
     setError(null);
     setPendingImport(null);
-    if (nextMode === 'lumber') setLinearProject(cloneProject(linearPresets['lumber-length']));
-    if (nextMode === 'tube') setLinearProject(cloneProject(linearPresets['pvc-pipe']));
-    trackEvent('sample_loaded', { mode: nextMode, sample: 'home-mode-switch' });
+    setPasteOpen(false);
+    setPaste('');
+    window.history.replaceState(null, '', `#${nextMode === 'sheet' ? 'sheet' : nextMode === 'tube' ? 'tube' : 'linear'}`);
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    if (nextMode === 'sheet') setSheetProject(createHomeSheetProject());
+    if (nextMode === 'lumber') setLinearProject(createHomeLinearProject('lumber'));
+    if (nextMode === 'tube') setLinearProject(createHomeLinearProject('tube'));
+    trackEvent('sample_loaded', { mode: nextMode, sample: 'sc4-mode-switch' });
   };
 
-  const updateSheetStock = (patch: Partial<SheetProjectInput['stock']>) => setSheetProject((project) => ({ ...project, stock: { ...project.stock, ...patch } }));
-  const updateSheetPart = (id: string, patch: Partial<SheetPartInput>) => setSheetProject((project) => ({ ...project, parts: project.parts.map((part) => part.id === id ? { ...part, ...patch } : part) }));
-  const updateLinearStock = (patch: Partial<LinearProjectInput['stock']>) => setLinearProject((project) => ({ ...project, stock: { ...project.stock, ...patch } }));
-  const updateLinearPart = (id: string, patch: Partial<LinearPartInput>) => setLinearProject((project) => ({ ...project, parts: project.parts.map((part) => part.id === id ? { ...part, ...patch } : part) }));
+  const updateSheetStock = (patch: Partial<SheetProjectInput['stock']>) => { clearOutput(); setSheetProject((project) => ({ ...project, stock: { ...project.stock, ...patch } })); };
+  const updateSheetPart = (id: string, patch: Partial<SheetPartInput>) => { clearOutput(); setSheetProject((project) => ({ ...project, parts: project.parts.map((part) => part.id === id ? { ...part, ...patch } : part) })); };
+  const updateLinearStock = (patch: Partial<LinearProjectInput['stock']>) => { clearOutput(); setLinearProject((project) => ({ ...project, stock: { ...project.stock, ...patch } })); };
+  const updateLinearPart = (id: string, patch: Partial<LinearPartInput>) => { clearOutput(); setLinearProject((project) => ({ ...project, parts: project.parts.map((part) => part.id === id ? { ...part, ...patch } : part) })); };
 
   const generate = () => {
     setError(null);
@@ -267,22 +331,33 @@ export function StockCutHomeWorkspace() {
 
   const loadSheetSample = () => {
     setMode('sheet');
-    setSheetProject(cloneProject(sheetPresets['plywood-4x8']));
+    setSheetProject(createHomeSheetProject());
     setResult(null);
     setError(null);
-    trackEvent('sample_loaded', { mode: 'sheet', sample: 'plywood-4x8', source: 'home' });
+    setPendingImport(null);
+    setPasteOpen(false);
+    setPaste('');
+    window.history.replaceState(null, '', '#sheet');
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    trackEvent('sample_loaded', { mode: 'sheet', sample: '4x8-home-clean', source: 'home' });
   };
 
   const loadLinearSample = (sample: 'lumber-length' | 'pvc-pipe' | 'steel-tube' | 'aluminum-extrusion') => {
     const nextMode: HomeMode = sample === 'lumber-length' ? 'lumber' : 'tube';
     setMode(nextMode);
-    setLinearProject(cloneProject(linearPresets[sample]));
+    setLinearProject(sample === 'lumber-length' ? createHomeLinearProject('lumber') : (() => { const project = cloneProject(linearPresets[sample]); delete project.extraStocks; project.stock.cost = ''; return project; })());
     setResult(null);
     setError(null);
+    setPendingImport(null);
+    setPasteOpen(false);
+    setPaste('');
+    window.history.replaceState(null, '', nextMode === 'lumber' ? '#linear' : '#tube');
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
     trackEvent('sample_loaded', { mode: 'linear', sample, source: 'home' });
   };
 
   const addPart = () => {
+    clearOutput();
     if (isLinearMode(mode)) {
       setLinearProject((project) => ({ ...project, parts: [...project.parts, { id: newId('linear-part'), label: 'New cut', length: '', quantity: '1', material: project.stock.material ?? '' }] }));
       return;
@@ -320,6 +395,7 @@ export function StockCutHomeWorkspace() {
     if (pendingImport.kind === 'sheet') setSheetProject((project) => ({ ...project, parts: pendingImport.rows }));
     if (pendingImport.kind === 'linear') setLinearProject((project) => ({ ...project, parts: pendingImport.rows }));
     setPendingImport(null);
+    setError(null);
     setPaste('');
     setPasteOpen(false);
     setResult(null);
@@ -346,12 +422,12 @@ export function StockCutHomeWorkspace() {
       return;
     }
     if (isLinearMode(mode)) {
-      const apply = (rows: LinearPartInput[]) => { setPendingImport({ kind: 'linear', rows }); setPasteOpen(true); };
+      const apply = (rows: LinearPartInput[]) => { setResult(null); setError(null); setPendingImport({ kind: 'linear', rows }); setPasteOpen(true); };
       if (isWorkbook) void parseLinearWorkbookFile(file).then((parsed) => parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n'))).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read Excel file.'));
       else void file.text().then((text) => { const parsed = parseLinearPaste(text); parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n')); }).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read CSV file.'));
       return;
     }
-    const apply = (rows: SheetPartInput[]) => { setPendingImport({ kind: 'sheet', rows }); setPasteOpen(true); };
+    const apply = (rows: SheetPartInput[]) => { setResult(null); setError(null); setPendingImport({ kind: 'sheet', rows }); setPasteOpen(true); };
     if (isWorkbook) void parseSheetWorkbookFile(file).then((parsed) => parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n'))).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read Excel file.'));
     else void file.text().then((text) => { const parsed = parseSheetPaste(text); parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n')); }).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read CSV file.'));
   };
@@ -386,43 +462,43 @@ export function StockCutHomeWorkspace() {
   const hasResult = Boolean(result);
 
   return (
-    <main className="home-shell" id="sheet">
-      <section className="home-hero">
+    <main className="sc4-shell" id="sheet">
+      <section className="sc4-hero">
         <h1>Cut list optimizer for sheet goods, boards, pipe, and tube</h1>
         <p>Enter your stock size and parts. StockCut creates a kerf-aware layout, cut sequence, waste estimate, and printable cut list in your browser.</p>
-        <div className="home-trust">▣ Saved locally in your browser <span>·</span> No upload</div>
+        <div className="sc4-trust">▣ Saved locally in your browser <span>·</span> No upload</div>
       </section>
 
-      <section className="home-mode-grid" aria-label="Choose what you need to cut">
+      <section className="sc4-mode-grid" aria-label="Choose what you need to cut">
         {([
           ['sheet', 'Sheet goods', 'Plywood · MDF · acrylic · melamine'],
           ['lumber', 'Boards / lumber', '2×4 · rails · shelves · straight stock'],
           ['tube', 'Pipe / tube / bar', 'PVC · steel tube · aluminum extrusion']
         ] as Array<[HomeMode, string, string]>).map(([key, title, description]) => (
-          <button key={key} type="button" className={`home-mode-card ${mode === key ? 'is-active' : ''}`} onClick={() => setModeAndPreset(key)}>
+          <button key={key} type="button" className={`sc4-mode-card ${mode === key ? 'is-active' : ''}`} onClick={() => setModeAndPreset(key)}>
             {iconForMode(key)}
             <span><strong>{title}</strong><small>{description}</small></span>
-            <span className="home-radio">{mode === key ? '✓' : ''}</span>
+            <span className="sc4-radio">{mode === key ? '✓' : ''}</span>
           </button>
         ))}
       </section>
 
-      <section className="home-workbench-grid">
-        <section className="home-panel home-input-panel" id="import">
-          <div className="home-panel-title"><span>1</span><h2>Enter stock and parts</h2></div>
+      <section className="sc4-workbench-grid">
+        <section className="sc4-panel sc4-input-panel" id="import">
+          <div className="sc4-panel-title"><span>1</span><h2>Enter stock and parts</h2></div>
 
           {!isLinearMode(mode) ? (
             <>
-              <div className="home-fieldset-title">Stock size</div>
-              <div className="home-fields sheet-fields">
+              <div className="sc4-fieldset-title">Stock size</div>
+              <div className="sc4-fields sheet-fields">
                 <label>Width<input value={compactDimension(sheetProject.stock.width)} onChange={(event) => updateSheetStock({ width: event.target.value })} /><span>in</span></label>
                 <label>Height<input value={compactDimension(sheetProject.stock.height)} onChange={(event) => updateSheetStock({ height: event.target.value })} /><span>in</span></label>
                 <label>Quantity<input value={sheetProject.stock.quantity} onChange={(event) => updateSheetStock({ quantity: event.target.value })} /></label>
-                <label>Kerf<select value={sheetProject.kerf} onChange={(event) => setSheetProject((project) => ({ ...project, kerf: event.target.value }))}><option value="1/8">1/8 in</option><option value="1/16">1/16 in</option><option value="3mm">3 mm</option><option value="0">0</option></select></label>
+                <label>Kerf<select value={sheetProject.kerf} onChange={(event) => { clearOutput(); setSheetProject((project) => ({ ...project, kerf: event.target.value })); }}><option value="1/8">1/8 in</option><option value="1/16">1/16 in</option><option value="3mm">3 mm</option><option value="0">0</option></select></label>
               </div>
-              <div className="home-table-header"><strong>Parts</strong><button type="button" onClick={addPart}>+ Add part</button></div>
-              <div className="home-table-wrap">
-                <table className="home-parts-table">
+              <div className="sc4-table-header"><strong>Parts</strong><button type="button" onClick={addPart}>+ Add part</button></div>
+              <div className="sc4-table-wrap">
+                <table className="sc4-parts-table">
                   <thead><tr><th>#</th><th>Label</th><th>Width (in)</th><th>Height (in)</th><th>Qty</th><th>Rotation</th><th /></tr></thead>
                   <tbody>{sheetProject.parts.map((part, index) => (
                     <tr key={part.id}>
@@ -432,7 +508,7 @@ export function StockCutHomeWorkspace() {
                       <td><input value={compactDimension(part.height)} onChange={(event) => updateSheetPart(part.id, { height: event.target.value })} /></td>
                       <td><input value={part.quantity} onChange={(event) => updateSheetPart(part.id, { quantity: event.target.value })} /></td>
                       <td><select value={part.allowRotation ? 'yes' : 'no'} onChange={(event) => updateSheetPart(part.id, { allowRotation: event.target.value === 'yes' })}><option value="yes">Allowed</option><option value="no">Locked</option></select></td>
-                      <td><button type="button" aria-label={`Remove ${part.label}`} onClick={() => setSheetProject((project) => ({ ...project, parts: project.parts.filter((row) => row.id !== part.id) }))}>⌫</button></td>
+                      <td><button type="button" aria-label={`Remove ${part.label}`} onClick={() => { clearOutput(); setSheetProject((project) => ({ ...project, parts: project.parts.filter((row) => row.id !== part.id) })); }}>⌫</button></td>
                     </tr>
                   ))}</tbody>
                 </table>
@@ -440,15 +516,15 @@ export function StockCutHomeWorkspace() {
             </>
           ) : (
             <>
-              <div className="home-fieldset-title">Stock length</div>
-              <div className="home-fields linear-fields">
+              <div className="sc4-fieldset-title">Stock length</div>
+              <div className="sc4-fields linear-fields">
                 <label>Length<input value={linearProject.stock.length} onChange={(event) => updateLinearStock({ length: event.target.value })} /></label>
                 <label>Quantity<input value={linearProject.stock.quantity} onChange={(event) => updateLinearStock({ quantity: event.target.value })} /></label>
-                <label>Kerf<select value={linearProject.kerf} onChange={(event) => setLinearProject((project) => ({ ...project, kerf: event.target.value }))}><option value="1/8">1/8 in</option><option value="2mm">2 mm</option><option value="3mm">3 mm</option><option value="0">0</option></select></label>
+                <label>Kerf<select value={linearProject.kerf} onChange={(event) => { clearOutput(); setLinearProject((project) => ({ ...project, kerf: event.target.value })); }}><option value="1/8">1/8 in</option><option value="2mm">2 mm</option><option value="3mm">3 mm</option><option value="0">0</option></select></label>
               </div>
-              <div className="home-table-header"><strong>Cuts</strong><button type="button" onClick={addPart}>+ Add cut</button></div>
-              <div className="home-table-wrap">
-                <table className="home-parts-table">
+              <div className="sc4-table-header"><strong>Cuts</strong><button type="button" onClick={addPart}>+ Add cut</button></div>
+              <div className="sc4-table-wrap">
+                <table className="sc4-parts-table">
                   <thead><tr><th>#</th><th>Label</th><th>Length</th><th>Qty</th><th>Material</th><th>Notes</th><th /></tr></thead>
                   <tbody>{linearProject.parts.map((part, index) => (
                     <tr key={part.id}>
@@ -458,7 +534,7 @@ export function StockCutHomeWorkspace() {
                       <td><input value={part.quantity} onChange={(event) => updateLinearPart(part.id, { quantity: event.target.value })} /></td>
                       <td><input value={part.material ?? ''} onChange={(event) => updateLinearPart(part.id, { material: event.target.value })} /></td>
                       <td><input value={part.notes ?? ''} onChange={(event) => updateLinearPart(part.id, { notes: event.target.value })} /></td>
-                      <td><button type="button" aria-label={`Remove ${part.label}`} onClick={() => setLinearProject((project) => ({ ...project, parts: project.parts.filter((row) => row.id !== part.id) }))}>⌫</button></td>
+                      <td><button type="button" aria-label={`Remove ${part.label}`} onClick={() => { clearOutput(); setLinearProject((project) => ({ ...project, parts: project.parts.filter((row) => row.id !== part.id) })); }}>⌫</button></td>
                     </tr>
                   ))}</tbody>
                 </table>
@@ -466,53 +542,53 @@ export function StockCutHomeWorkspace() {
             </>
           )}
 
-          {error && <pre className="home-error">{error}</pre>}
-          {warnings.length > 0 && <div className="home-warning">{warnings.slice(0, 3).map((warning, index) => <p key={`${warning.code}-${index}`}>{warning.message}</p>)}</div>}
+          {error && <pre className="sc4-error">{error}</pre>}
 
-          <button type="button" className="home-generate" onClick={generate}>▦ {isLinearMode(mode) ? 'Generate cutting sequence' : 'Generate cut layout'}<small>Create optimized layout, cut list, and waste estimate</small></button>
+          <button type="button" className="sc4-generate" onClick={generate}>▦ {isLinearMode(mode) ? 'Generate cutting sequence' : 'Generate cut layout'}<small>Create optimized layout, cut list, and waste estimate</small></button>
 
-          <div className="home-secondary-actions">
+          <div className="sc4-secondary-actions">
             <button type="button" onClick={isLinearMode(mode) ? () => loadLinearSample(mode === 'tube' ? 'pvc-pipe' : 'lumber-length') : loadSheetSample}>{isLinearMode(mode) ? (mode === 'tube' ? 'PVC pipe sample' : '8 ft lumber sample') : 'Load 4×8 plywood sample'}</button>
             <button type="button" onClick={() => setPasteOpen((open) => !open)}>Paste from spreadsheet</button>
             <button type="button" onClick={() => fileInputRef.current?.click()}>Import CSV / Excel</button>
-            <input ref={fileInputRef} className="sr-only" type="file" accept=".csv,.txt,.xlsx,.xls,.json,text/csv,text/plain,application/json" onChange={(event: ChangeEvent<HTMLInputElement>) => importFile(event.currentTarget.files?.[0])} />
+            <input ref={fileInputRef} className="sr-only" type="file" accept=".csv,.txt,.xlsx,.xls,.json,text/csv,text/plain,application/json" onChange={(event: ChangeEvent<HTMLInputElement>) => { importFile(event.currentTarget.files?.[0]); event.currentTarget.value = ''; }} />
           </div>
 
-          {pasteOpen && <div className="home-paste-box">
+          {pasteOpen && <div className="sc4-paste-box">
             <label>Paste rows from Excel / Google Sheets<textarea value={paste} onChange={(event) => setPaste(event.target.value)} placeholder={isLinearMode(mode) ? 'Label\tLength\tQuantity\tMaterial\tNotes' : 'Label\tWidth\tHeight\tQuantity\tRotate\tMaterial'} /></label>
             <div className="flex flex-wrap gap-2"><button type="button" onClick={parsePastedRows}>Preview pasted rows</button><button type="button" onClick={() => { setPasteOpen(false); setPendingImport(null); }}>Cancel</button></div>
-            {pendingImport && <div className="home-import-preview"><strong>{pendingImport.rows.length} rows parsed.</strong><span>Existing rows will be replaced only after confirmation.</span><button type="button" onClick={confirmImport}>Confirm import</button></div>}
+            {pendingImport && <div className="sc4-import-preview"><strong>{pendingImport.rows.length} rows parsed.</strong><span>Existing rows will be replaced only after confirmation.</span><button type="button" onClick={confirmImport}>Confirm import</button></div>}
           </div>}
 
-          <details className="home-advanced-inline">
+          <details className="sc4-advanced-inline">
             <summary>Advanced: reusable offcuts and mixed stock sizes</summary>
-            <div className="home-advanced-note">Open Advanced controls below for strategy, grain direction, trim margins, edge banding, extra stock / offcut library, manual adjustment, and project import/export.</div>
+            <div className="sc4-advanced-note">Open Advanced controls below for strategy, grain direction, trim margins, edge banding, extra stock / offcut library, manual adjustment, and project import/export.</div>
           </details>
         </section>
 
-        <section className="home-panel home-preview-panel">
-          <div className="home-panel-title"><span>2</span><h2>See the layout before you cut</h2></div>
-          <div className="home-preview-callout"><strong>{hasResult ? 'Optimized layout preview' : 'Preview will appear here after calculation'}</strong><span>{hasResult ? 'Review the first layout, then print or export.' : 'Example preview, not your result yet'}</span></div>
+        <section className="sc4-panel sc4-preview-panel">
+          <div className="sc4-panel-title"><span>2</span><h2>See the layout before you cut</h2></div>
+          <div className="sc4-preview-callout"><strong>{hasResult ? 'Optimized layout preview' : 'Preview will appear here after calculation'}</strong><span>{hasResult ? 'Review the first layout, then print or export.' : 'Example preview'}</span></div>
           {result?.kind === 'sheet' && <SheetResultPreview result={result.result} unit={sheetProject.unit} />}
           {result?.kind === 'linear' && <LinearResultPreview result={result.result} unit={linearProject.unit} />}
           {!result && <ExampleSheetPreview mode={mode} />}
-          <div className="home-summary-grid">{summary.map(([label, value]) => <SummaryCell key={label} label={label} value={value} />)}</div>
-          <div className="home-status-grid">
+          <div className="sc4-summary-grid">{summary.map(([label, value]) => <SummaryCell key={label} label={label} value={value} />)}</div>
+          <div className="sc4-status-grid">
             <StatusChip title="Printable cut list" value={hasResult ? 'Ready' : 'Ready after calculation'} active={hasResult} />
             <StatusChip title="Cut sequence" value={hasResult ? 'Generated' : 'After calculation'} active={hasResult} />
             <StatusChip title="Share link" value={hasResult ? 'Available' : 'Available after calculation'} active={hasResult} />
           </div>
+          {warnings.length > 0 && <div className="sc4-warning">{warnings.slice(0, 2).map((warning, index) => <p key={`${warning.code}-${index}`}>{warning.message}</p>)}</div>}
         </section>
       </section>
 
-      <div className="home-how"><strong>How it works:</strong> Enter your stock and parts → Generate layout → Review results → Print or export your cut list.</div>
+      <div className="sc4-how"><strong>How it works:</strong> Enter your stock and parts → Generate layout → Review results → Print or export your cut list.</div>
 
-      <section className="home-bottom-grid" id="examples">
-        <div className="home-bottom-card">
+      <section className="sc4-bottom-grid" id="examples">
+        <div className="sc4-bottom-card">
           <h3>Exports and shop output</h3><p>{hasResult ? 'Print, PDF, CSV, share link, DXF and more' : 'Generate a layout first, then print or export your cut list.'}</p>
           {hasResult ? (
             <>
-              <div className="home-export-grid">
+              <div className="sc4-export-grid">
                 <IconButton onClick={() => window.print()}>▣ Print / Save PDF</IconButton>
                 <IconButton onClick={downloadPdf}>⇩ Download PDF</IconButton>
                 <IconButton onClick={exportCsv}>▤ Export CSV</IconButton>
@@ -520,27 +596,27 @@ export function StockCutHomeWorkspace() {
                 <IconButton onClick={copyShareLink}>↗ Copy share link</IconButton>
                 <IconButton disabled={!isSheetResult} onClick={() => result?.kind === 'sheet' && downloadSheetDxf(result.result)}>DXF Download</IconButton>
               </div>
-              <details className="home-more"><summary>More exports</summary><button type="button" onClick={exportJson}>Download project JSON</button></details>
+              <details className="sc4-more"><summary>More exports</summary><button type="button" onClick={exportJson}>Download project JSON</button></details>
             </>
-          ) : <div className="home-bottom-inline">Print / PDF · CSV · Share link · DXF unlock after Generate</div>}
+          ) : <div className="sc4-bottom-inline">Print / PDF · CSV · Share link · DXF unlock after Generate</div>}
         </div>
-        <div className="home-bottom-card">
+        <div className="sc4-bottom-card">
           <h3>Advanced controls</h3><p>Strategy, grain direction, trim, offcuts, project import/export</p>
-          <details className="home-more"><summary>Open advanced controls</summary>
-            <div className="home-advanced-grid">
-              <label>Strategy<select value={activeProject.strategy ?? 'least_waste'} onChange={(event) => isLinearMode(mode) ? setLinearProject((project) => ({ ...project, strategy: event.target.value as LinearProjectInput['strategy'] })) : setSheetProject((project) => ({ ...project, strategy: event.target.value as SheetProjectInput['strategy'] }))}><option value="least_waste">Least waste</option><option value="least_stock">Least stock</option><option value="fewer_cuts">Fewer cuts</option></select></label>
+          <details className="sc4-more"><summary>Open advanced controls</summary>
+            <div className="sc4-advanced-grid">
+              <label>Strategy<select value={activeProject.strategy ?? 'least_waste'} onChange={(event) => { clearOutput(); isLinearMode(mode) ? setLinearProject((project) => ({ ...project, strategy: event.target.value as LinearProjectInput['strategy'] })) : setSheetProject((project) => ({ ...project, strategy: event.target.value as SheetProjectInput['strategy'] })); }}><option value="least_waste">Least waste</option><option value="least_stock">Least stock</option><option value="fewer_cuts">Fewer cuts</option></select></label>
               {!isLinearMode(mode) && <label>Grain direction<select value={sheetProject.stock.grainDirection ?? 'none'} onChange={(event) => updateSheetStock({ grainDirection: event.target.value as SheetProjectInput['stock']['grainDirection'] })}><option value="none">None</option><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label>}
-              <button type="button" onClick={exportJson}>Project import / export</button>
+              <button type="button" onClick={exportJson}>Download project JSON</button><button type="button" onClick={() => fileInputRef.current?.click()}>Import project / CSV</button>
             </div>
           </details>
         </div>
-        <div className="home-bottom-card">
+        <div className="sc4-bottom-card">
           <h3>Help and resources</h3><p>How it works, examples, FAQ</p>
-          <div className="home-help-buttons"><button type="button" onClick={() => setPasteOpen(true)}>How it works</button><button type="button" onClick={loadSheetSample}>Examples</button><button type="button" onClick={() => alert('StockCut runs in your browser. It creates practical cut lists for rectangular sheet goods and straight stock. It is not CNC toolpath software.')}>FAQ</button></div>
+          <div className="sc4-help-buttons"><button type="button" onClick={() => document.querySelector('.sc4-how')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>How it works</button><button type="button" onClick={() => isLinearMode(mode) ? loadLinearSample(mode === 'tube' ? 'pvc-pipe' : 'lumber-length') : loadSheetSample()}>Examples</button><button type="button" onClick={() => alert('StockCut runs in your browser. It creates practical cut lists for rectangular sheet goods and straight stock. It is not CNC toolpath software.')}>FAQ</button></div>
         </div>
       </section>
 
-      <p className="home-privacy-note">▣ All calculations run in your browser. Your data never leaves your device.</p>
+      <p className="sc4-privacy-note">▣ All calculations run in your browser. Your data never leaves your device.</p>
     </main>
   );
 }
