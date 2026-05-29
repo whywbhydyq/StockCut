@@ -80,70 +80,55 @@ function iconForMode(mode: HomeMode) {
 
 function SummaryCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border-r border-slate-200 px-3 py-3 text-center last:border-r-0">
-      <span className="block text-[12px] font-medium text-slate-600">{label}</span>
-      <strong className="mt-1 block font-mono text-xl font-semibold text-slate-950">{value}</strong>
+    <div className="border-r border-slate-200 px-2 py-2 text-center last:border-r-0">
+      <span className="block text-[11px] font-medium text-slate-600">{label}</span>
+      <strong className="mt-0.5 block font-mono text-base font-semibold text-slate-950">{value}</strong>
     </div>
   );
 }
 
 function StatusChip({ title, value, active }: { title: string; value: string; active: boolean }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <span className={active ? 'grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-700' : 'grid h-9 w-9 place-items-center rounded-xl bg-slate-50 text-slate-500'}>
+    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
+      <span className={active ? 'grid h-7 w-7 place-items-center rounded-lg bg-emerald-50 text-sm text-emerald-700' : 'grid h-7 w-7 place-items-center rounded-lg bg-slate-50 text-sm text-slate-500'}>
         {active ? '✓' : '○'}
       </span>
       <span>
-        <strong className="block text-sm text-slate-950">{title}</strong>
-        <span className="text-xs text-slate-500">{value}</span>
+        <strong className="block text-xs text-slate-950">{title}</strong>
+        <span className="text-[11px] text-slate-500">{value}</span>
       </span>
     </div>
   );
 }
 
 function ExampleSheetPreview({ mode }: { mode: HomeMode }) {
-  const isLinear = isLinearMode(mode);
-  if (isLinear) {
-    return (
-      <div className="relative mx-auto mt-5 max-w-3xl px-6 py-7">
-        <div className="absolute left-7 right-7 top-1/2 h-14 -translate-y-1/2 rounded-xl border border-slate-400 bg-[linear-gradient(90deg,#f8fafc,#e2e8f0)]" />
-        <div className="relative h-14 overflow-hidden rounded-xl border border-slate-500 bg-slate-50">
-          <div className="absolute inset-y-0 left-[3%] w-[25%] border-x border-dashed border-slate-500 bg-emerald-50/60" />
-          <div className="absolute inset-y-0 left-[31%] w-[18%] border-x border-dashed border-slate-500 bg-blue-50/60" />
-          <div className="absolute inset-y-0 left-[53%] w-[21%] border-x border-dashed border-slate-500 bg-amber-50/60" />
-          <div className="absolute inset-y-0 left-[79%] w-[15%] border-x border-dashed border-slate-500 bg-slate-100/80" />
-          <div className="absolute inset-0 grid place-items-center text-center">
-            <strong className="text-base text-slate-950">Preview will appear here after calculation</strong>
-            <span className="mt-6 text-sm text-slate-500">Example stock preview</span>
-          </div>
-        </div>
-        <div className="mt-3 flex items-center justify-between border-t border-slate-300 text-sm font-medium text-slate-800"><span>0 in</span><span>{mode === 'tube' ? '120 in' : '96 in'}</span></div>
-      </div>
-    );
-  }
-
+  const linear = isLinearMode(mode);
   return (
-    <div className="relative mx-auto mt-5 max-w-3xl px-10 pb-8 pt-2">
-      <div className="absolute left-1 top-8 h-[178px] border-l border-slate-400" />
-      <div className="absolute left-0 top-8 h-px w-3 bg-slate-400" />
-      <div className="absolute left-0 top-[214px] h-px w-3 bg-slate-400" />
-      <span className="absolute left-0 top-[118px] -translate-x-2 bg-white px-1 text-sm font-medium text-slate-800">48 in</span>
-      <div className="relative h-[190px] rounded-sm border border-slate-500 bg-[linear-gradient(120deg,rgba(255,255,255,.8),rgba(226,232,240,.35))] shadow-inner">
-        <div className="absolute left-[3%] top-[14%] h-[64%] w-[17%] border border-dashed border-slate-500" />
-        <div className="absolute left-[22%] top-[14%] h-[64%] w-[22%] border border-dashed border-slate-500" />
-        <div className="absolute left-[48%] top-[14%] h-[28%] w-[22%] border border-dashed border-slate-500" />
-        <div className="absolute left-[73%] top-[14%] h-[28%] w-[21%] border border-dashed border-slate-500" />
-        <div className="absolute left-[48%] top-[50%] h-[28%] w-[38%] border border-dashed border-slate-500" />
-        <div className="absolute inset-0 grid place-items-center text-center">
-          <strong className="text-lg text-slate-950">Preview will appear here after calculation</strong>
-          <span className="mt-8 text-sm text-slate-500">Example preview</span>
+    <div className={`home-example-preview ${linear ? 'is-linear' : 'is-sheet'}`}>
+      <div className="home-example-dimension home-example-dimension-y">{linear ? 'stock' : '48 in'}</div>
+      <div className="home-example-canvas" aria-hidden="true">
+        {linear ? (
+          <>
+            <span className="segment s1" />
+            <span className="segment s2" />
+            <span className="segment s3" />
+            <span className="segment waste" />
+          </>
+        ) : (
+          <>
+            <span className="part p1" />
+            <span className="part p2" />
+            <span className="part p3" />
+            <span className="part p4" />
+            <span className="part p5" />
+          </>
+        )}
+        <div className="home-example-copy">
+          <strong>{linear ? 'Example stock preview' : 'Example sheet preview'}</strong>
+          <span>Generated layout will use your parts</span>
         </div>
       </div>
-      <div className="relative mt-3 border-t border-slate-400">
-        <span className="absolute left-0 top-[-6px] h-3 w-px bg-slate-400" />
-        <span className="absolute right-0 top-[-6px] h-3 w-px bg-slate-400" />
-        <span className="absolute left-1/2 top-[-12px] -translate-x-1/2 bg-white px-3 text-sm font-medium text-slate-800">96 in</span>
-      </div>
+      <div className="home-example-dimension home-example-dimension-x">{linear ? (mode === 'tube' ? '120 in' : '96 in') : '96 in'}</div>
     </div>
   );
 }
@@ -208,6 +193,32 @@ export function StockCutHomeWorkspace() {
 
   useEffect(() => saveProject(SHEET_STORAGE_KEY, sheetProject), [sheetProject]);
   useEffect(() => saveProject(LINEAR_STORAGE_KEY, linearProject), [linearProject]);
+
+  useEffect(() => {
+    const applyHashMode = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#linear' || hash === '#lumber') {
+        setMode('lumber');
+        setLinearProject(cloneProject(linearPresets['lumber-length']));
+        setResult(null);
+        setError(null);
+      }
+      if (hash === '#tube' || hash === '#pipe') {
+        setMode('tube');
+        setLinearProject(cloneProject(linearPresets['pvc-pipe']));
+        setResult(null);
+        setError(null);
+      }
+      if (hash === '#sheet') {
+        setMode('sheet');
+        setResult(null);
+        setError(null);
+      }
+    };
+    applyHashMode();
+    window.addEventListener('hashchange', applyHashMode);
+    return () => window.removeEventListener('hashchange', applyHashMode);
+  }, []);
 
   const activeProject = isLinearMode(mode) ? linearProject : sheetProject;
   const isSheetResult = result?.kind === 'sheet';
@@ -511,7 +522,7 @@ export function StockCutHomeWorkspace() {
 
       <div className="home-how"><strong>How it works:</strong> Enter your stock and parts → Generate layout → Review results → Print or export your cut list.</div>
 
-      <section className="home-bottom-grid">
+      <section className="home-bottom-grid" id="examples">
         <div className="home-bottom-card">
           <h3>Exports and shop output</h3><p>Print, PDF, CSV, share link, DXF and more</p>
           <div className="home-export-grid">

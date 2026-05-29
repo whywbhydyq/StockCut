@@ -37,9 +37,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/" className="home-logo" aria-label="StockCut home"><LogoMark /><span>StockCut</span></Link>
             <nav className="home-nav" aria-label="Primary navigation">
               <Link href="/#sheet">Sheet</Link>
-              <Link href="/#sheet">Linear</Link>
+              <Link href="/#linear">Linear</Link>
               <Link href="/saw-kerf-calculator">Kerf</Link>
-              <Link href="/#import">Examples</Link>
+              <Link href="/#examples">Examples</Link>
               <Link href="/#import">↥ Import</Link>
             </nav>
           </div>
