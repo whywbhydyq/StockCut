@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root { color-scheme: light; }
-body { @apply bg-[#f7f1e8] text-stock-ink antialiased; }
+body { @apply bg-slate-50 text-slate-950 antialiased; }
 a { @apply underline-offset-4 hover:underline; }
 input, select, textarea { @apply w-full rounded-xl border border-stock-line bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-stock-accent; }
 button { @apply min-h-11 rounded-xl px-4 py-2 text-sm font-bold transition; }
@@ -43,4 +43,109 @@ button { @apply min-h-11 rounded-xl px-4 py-2 text-sm font-bold transition; }
   .status-info { @apply rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900; }
   .status-warning { @apply rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900; }
   .status-danger { @apply rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800; }
+}
+
+@layer components {
+  .home-site-header { @apply sticky top-0 z-30 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur; }
+  .home-site-header-inner { @apply mx-auto flex max-w-[1800px] items-center justify-between px-6 py-3; }
+  .home-logo { @apply flex items-center gap-3 text-3xl font-black tracking-tight text-slate-950 no-underline hover:no-underline; }
+  .home-nav { @apply hidden items-center gap-8 text-base font-medium text-slate-800 md:flex; }
+  .home-nav a { @apply border-b-2 border-transparent py-4 no-underline hover:border-blue-600 hover:text-blue-700; }
+  .home-nav a:first-child { @apply border-blue-600 text-blue-700; }
+
+  .home-shell { @apply mx-auto max-w-[1800px] px-6 pb-8 pt-7; }
+  .home-hero { @apply max-w-4xl; }
+  .home-hero h1 { @apply text-3xl font-black tracking-tight text-slate-950 md:text-4xl; }
+  .home-hero p { @apply mt-3 max-w-3xl text-lg leading-8 text-slate-700; }
+  .home-trust { @apply mt-3 inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800; }
+
+  .home-mode-grid { @apply mt-5 grid gap-6 lg:grid-cols-3; }
+  .home-mode-card { @apply flex min-h-[88px] items-center gap-5 rounded-xl border border-slate-300 bg-white px-6 py-4 text-left shadow-sm hover:border-blue-400 hover:bg-blue-50/30; }
+  .home-mode-card strong { @apply block text-xl font-black text-slate-950; }
+  .home-mode-card small { @apply mt-1 block text-base text-slate-600; }
+  .home-mode-card.is-active { @apply border-blue-600 bg-blue-50/40 shadow-[0_0_0_1px_rgba(37,99,235,0.25)]; }
+  .home-radio { @apply ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-full border border-slate-400 text-sm font-black text-white; }
+  .home-mode-card.is-active .home-radio { @apply border-blue-600 bg-blue-600; }
+
+  .home-workbench-grid { @apply mt-6 grid gap-5 xl:grid-cols-[minmax(0,0.92fr)_minmax(720px,1.08fr)]; }
+  .home-panel { @apply rounded-xl border border-slate-200 bg-white p-6 shadow-[0_14px_38px_rgba(15,23,42,0.06)]; }
+  .home-panel-title { @apply mb-5 flex items-center gap-3; }
+  .home-panel-title span { @apply grid h-8 w-8 place-items-center rounded-full bg-blue-600 text-base font-black text-white; }
+  .home-panel-title h2 { @apply text-2xl font-black tracking-tight text-slate-950; }
+  .home-fieldset-title { @apply mb-2 text-lg font-black text-slate-950; }
+
+  .home-fields { @apply grid gap-4; }
+  .home-fields label { @apply relative text-sm font-medium text-slate-700; }
+  .home-fields input, .home-fields select { @apply mt-1 h-12 rounded-lg border-slate-300 bg-white text-base text-slate-950 shadow-none focus:border-blue-600; }
+  .home-fields label span { @apply absolute bottom-3 right-4 text-base font-semibold text-slate-700; }
+  .home-fields label span + input { @apply pr-12; }
+  .sheet-fields { @apply md:grid-cols-[1.1fr_1.1fr_0.85fr_1fr]; }
+  .linear-fields { @apply md:grid-cols-[1.4fr_0.9fr_1fr]; }
+
+  .home-table-header { @apply mt-5 flex items-center justify-between; }
+  .home-table-header strong { @apply text-lg text-slate-950; }
+  .home-table-header button { @apply min-h-0 rounded-none bg-transparent px-0 py-0 text-base font-medium text-blue-700 hover:underline; }
+  .home-table-wrap { @apply mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-white; }
+  .home-parts-table { @apply w-full min-w-[740px] border-collapse text-sm; }
+  .home-parts-table th { @apply border-b border-r border-slate-200 bg-slate-50 px-3 py-3 text-left font-black text-slate-900 last:border-r-0; }
+  .home-parts-table td { @apply border-r border-t border-slate-200 px-3 py-2 align-middle text-slate-950 last:border-r-0; }
+  .home-parts-table input, .home-parts-table select { @apply h-9 rounded-md border-slate-200 px-2 py-1 text-sm shadow-none focus:border-blue-600; }
+  .home-parts-table td:first-child { @apply w-10 text-center font-mono text-slate-700; }
+  .home-parts-table td:last-child button { @apply min-h-0 rounded-md bg-transparent px-2 py-1 text-lg font-normal text-slate-500 hover:bg-slate-100 hover:text-slate-900; }
+
+  .home-error { @apply mt-4 whitespace-pre-wrap rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800; }
+  .home-warning { @apply mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900; }
+  .home-generate { @apply mt-5 flex w-full flex-col items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-lg font-black text-white shadow-sm hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2; }
+  .home-generate small { @apply mt-1 text-xs font-medium text-blue-100; }
+  .home-secondary-actions { @apply mt-3 grid gap-3 md:grid-cols-3; }
+  .home-secondary-actions button { @apply rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 hover:border-blue-300 hover:bg-blue-50; }
+  .home-paste-box { @apply mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4; }
+  .home-paste-box textarea { @apply mt-2 min-h-28 rounded-lg border-slate-300 bg-white text-sm; }
+  .home-paste-box button, .home-import-preview button { @apply min-h-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100; }
+  .home-import-preview { @apply mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900; }
+  .home-import-preview span { @apply text-emerald-700; }
+  .home-advanced-inline { @apply mt-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm; }
+  .home-advanced-inline summary { @apply cursor-pointer font-black text-slate-900; }
+  .home-advanced-note { @apply mt-2 text-slate-600; }
+
+  .home-preview-callout { @apply rounded-lg border border-slate-200 bg-white px-4 py-3 text-center; }
+  .home-preview-callout strong { @apply block text-lg font-black text-slate-950; }
+  .home-preview-callout span { @apply mt-1 block text-sm text-slate-500; }
+  .home-summary-grid { @apply mt-4 grid overflow-hidden rounded-lg border border-slate-200 bg-white md:grid-cols-5; }
+  .home-status-grid { @apply mt-4 grid gap-4 md:grid-cols-3; }
+
+  .home-how { @apply mt-5 rounded-lg border border-blue-100 bg-blue-50 px-5 py-4 text-sm text-slate-700; }
+  .home-how strong { @apply text-blue-700; }
+  .home-bottom-grid { @apply mt-5 grid gap-5 xl:grid-cols-3; }
+  .home-bottom-card { @apply rounded-xl border border-slate-200 bg-white p-5 shadow-sm; }
+  .home-bottom-card h3 { @apply text-xl font-black text-slate-950; }
+  .home-bottom-card p { @apply mt-1 text-sm text-slate-500; }
+  .home-export-grid { @apply mt-4 grid gap-2 md:grid-cols-2; }
+  .home-action-button { @apply min-h-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-slate-200 disabled:hover:bg-white; }
+  .home-more { @apply mt-3 rounded-lg border border-slate-200 px-3 py-2 text-sm; }
+  .home-more summary { @apply cursor-pointer text-center font-semibold text-slate-700; }
+  .home-more button { @apply mt-2 min-h-0 w-full rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-800; }
+  .home-advanced-grid { @apply mt-4 grid gap-2 md:grid-cols-2; }
+  .home-advanced-grid label { @apply text-sm font-medium text-slate-700; }
+  .home-advanced-grid select { @apply mt-1 h-10 rounded-lg border-slate-300 bg-white text-sm shadow-none; }
+  .home-advanced-grid button, .home-help-buttons button { @apply min-h-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-100; }
+  .home-bottom-card small { @apply mt-3 block text-xs text-slate-500; }
+  .home-help-buttons { @apply mt-4 grid gap-2 md:grid-cols-3; }
+  .home-tip { @apply mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600; }
+  .home-privacy-note { @apply mt-4 text-center text-sm text-slate-500; }
+}
+
+@media (max-width: 720px) {
+  .home-site-header-inner { @apply px-4; }
+  .home-logo { @apply text-2xl; }
+  .home-shell { @apply px-4 pt-5; }
+  .home-hero h1 { @apply text-2xl; }
+  .home-hero p { @apply text-base leading-7; }
+  .home-mode-grid { @apply gap-3; }
+  .home-mode-card { @apply min-h-0 px-4; }
+  .home-workbench-grid { @apply grid-cols-1; }
+  .home-panel { @apply p-4; }
+  .home-summary-grid { @apply grid-cols-2; }
+  .home-status-grid { @apply grid-cols-1; }
+  .home-bottom-grid { @apply grid-cols-1; }
 }

@@ -6,11 +6,17 @@ import './globals.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://stockcut.ymirtool.com'),
-  title: { default: 'Free Cut List Optimizer with Kerf - StockCut', template: '%s - StockCut' },
+  title: { default: 'Cut List Optimizer for Sheet Goods, Boards, Pipe, and Tube - StockCut', template: '%s - StockCut' },
   description: 'Optimize sheet and linear stock cuts with kerf, labels, waste, offcuts, and printable layouts. Works locally for plywood, MDF, lumber, tube, and pipe.',
   alternates: { canonical: '/' },
   manifest: '/manifest.webmanifest'
 };
+
+function LogoMark() {
+  return (
+    <span className="grid h-9 w-9 place-items-center rounded-lg bg-blue-600 text-lg font-black text-white shadow-sm" aria-hidden="true">S</span>
+  );
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -26,20 +32,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           strategy="afterInteractive"
         />
         <PwaRegister />
-        <header className="sticky top-0 z-20 border-b border-stock-line bg-stock-paper/95 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between">
-            <Link href="/" className="text-2xl font-black tracking-tight no-underline">StockCut</Link>
-            <nav className="flex flex-wrap gap-3 text-sm font-semibold text-stock-muted">
-              <Link href="/sheet-cutting-optimizer">Sheet Optimizer</Link>
-              <Link href="/linear-cutting-optimizer">Linear Optimizer</Link>
-              <Link href="/saw-kerf-calculator">Kerf Calculator</Link>
-              <Link href="/4x8-plywood-cut-list-optimizer">4×8 Plywood</Link>
-              <Link href="/steel-tube-cutting-optimizer">Steel Tube</Link>
+        <header className="home-site-header">
+          <div className="home-site-header-inner">
+            <Link href="/" className="home-logo" aria-label="StockCut home"><LogoMark /><span>StockCut</span></Link>
+            <nav className="home-nav" aria-label="Primary navigation">
+              <Link href="/#sheet">Sheet</Link>
+              <Link href="/#sheet">Linear</Link>
+              <Link href="/saw-kerf-calculator">Kerf</Link>
+              <Link href="/#import">Examples</Link>
+              <Link href="/#import">↥ Import</Link>
             </nav>
           </div>
         </header>
         {children}
-        <footer className="mx-auto flex max-w-7xl flex-wrap gap-4 px-4 py-8 text-sm text-stock-muted">
+        <footer className="mx-auto flex max-w-[1800px] flex-wrap justify-center gap-4 px-6 py-8 text-sm text-slate-500">
           <Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/disclaimer">Disclaimer</Link><Link href="/about">About</Link><Link href="/contact">Contact</Link>
         </footer>
       </body>
