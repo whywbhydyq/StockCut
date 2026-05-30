@@ -44,14 +44,6 @@ const jsonLd = {
       ]
     },
     {
-      '@type': 'FAQPage',
-      mainEntity: [
-        { '@type': 'Question', name: 'Can I optimize 4x8 plywood sheets?', acceptedAnswer: { '@type': 'Answer', text: 'Yes. Use Sheet goods mode, load the 4×8 plywood sample, then replace the sample parts with your own cabinet, shelf, panel, or acrylic parts.' } },
-        { '@type': 'Question', name: 'Can I use StockCut for pipe, tube, bar, or lumber?', acceptedAnswer: { '@type': 'Answer', text: 'Yes. Boards / lumber and Pipe / tube / bar modes keep separate drafts and generate straight-stock cutting sequences with kerf, waste, and unplaced-cut warnings.' } },
-        { '@type': 'Question', name: 'Does StockCut upload my cut list?', acceptedAnswer: { '@type': 'Answer', text: 'No. Optimization runs in your browser. Your drafts are saved locally unless you choose to export a file or copy a share link.' } }
-      ]
-    },
-    {
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'StockCut', item: siteUrl }

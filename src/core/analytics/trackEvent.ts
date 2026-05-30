@@ -17,7 +17,6 @@ export type StockCutEventName =
   | 'dxf_export_clicked'
   | 'optimization_cancelled'
   | 'mode_switched'
-  | 'mode_switched'
   | 'offcuts_saved_to_stock'
   | 'offcuts_saved_to_library'
   | 'offcut_library_loaded'
