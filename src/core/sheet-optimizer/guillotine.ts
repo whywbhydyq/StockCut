@@ -140,22 +140,75 @@ function makeSheet(option: StockOption, index: number): WorkingSheet {
   };
 }
 
+function rectArea(rect: FreeRect): number {
+  return rect.widthUm * rect.heightUm;
+}
+
+function containsRect(a: FreeRect, b: FreeRect): boolean {
+  return a.xUm <= b.xUm
+    && a.yUm <= b.yUm
+    && a.xUm + a.widthUm >= b.xUm + b.widthUm
+    && a.yUm + a.heightUm >= b.yUm + b.heightUm;
+}
+
+function pruneFreeRects(rects: FreeRect[]): FreeRect[] {
+  return rects
+    .filter((rect) => rect.widthUm > 0 && rect.heightUm > 0)
+    .filter((rect, index, all) => !all.some((other, otherIndex) => otherIndex !== index && containsRect(other, rect)))
+    .sort((a, b) => rectArea(b) - rectArea(a));
+}
+
+function splitAfterPlacement(rect: FreeRect, widthUm: number, heightUm: number, kerfUm: number, mode: 'vertical-first' | 'horizontal-first'): FreeRect[] {
+  const rightWidth = rect.widthUm - widthUm - kerfUm;
+  const bottomHeight = rect.heightUm - heightUm - kerfUm;
+  if (mode === 'vertical-first') {
+    return [
+      { xUm: rect.xUm + widthUm + kerfUm, yUm: rect.yUm, widthUm: rightWidth, heightUm: rect.heightUm },
+      { xUm: rect.xUm, yUm: rect.yUm + heightUm + kerfUm, widthUm, heightUm: bottomHeight }
+    ].filter((candidate) => candidate.widthUm > 0 && candidate.heightUm > 0);
+  }
+  return [
+    { xUm: rect.xUm + widthUm + kerfUm, yUm: rect.yUm, widthUm: rightWidth, heightUm },
+    { xUm: rect.xUm, yUm: rect.yUm + heightUm + kerfUm, widthUm: rect.widthUm, heightUm: bottomHeight }
+  ].filter((candidate) => candidate.widthUm > 0 && candidate.heightUm > 0);
+}
+
+function scoreCandidate(rect: FreeRect, widthUm: number, heightUm: number, nextFreeRects: FreeRect[]): number {
+  const wasteWidth = rect.widthUm - widthUm;
+  const wasteHeight = rect.heightUm - heightUm;
+  const leftoverArea = rectArea(rect) - widthUm * heightUm;
+  const largestFreeArea = nextFreeRects.reduce((max, candidate) => Math.max(max, rectArea(candidate)), 0);
+  const fragmentationPenalty = nextFreeRects.length * 1_000_000;
+  const shortSidePenalty = Math.min(wasteWidth, wasteHeight);
+  return leftoverArea - largestFreeArea * 0.18 + fragmentationPenalty + shortSidePenalty;
+}
+
 function placeInSheet(sheet: WorkingSheet, part: PartInstance, kerfUm: number): boolean {
   if (!materialCompatible(part, sheet)) return false;
-  type PlacementCandidate = { rect: FreeRect; rectIndex: number; widthUm: number; heightUm: number; rotated: boolean; score: number };
+  type PlacementCandidate = {
+    rect: FreeRect;
+    rectIndex: number;
+    widthUm: number;
+    heightUm: number;
+    rotated: boolean;
+    nextFreeRects: FreeRect[];
+    score: number;
+  };
   let best: PlacementCandidate | null = null;
   for (let rectIndex = 0; rectIndex < sheet.freeRects.length; rectIndex += 1) {
     const rect = sheet.freeRects[rectIndex];
     for (const orientation of orientations(part)) {
-      if (orientation.widthUm <= rect.widthUm && orientation.heightUm <= rect.heightUm) {
-        const score = rect.widthUm * rect.heightUm - orientation.widthUm * orientation.heightUm;
-        if (!best || score < best.score) best = { rect, rectIndex, ...orientation, score };
+      if (orientation.widthUm > rect.widthUm || orientation.heightUm > rect.heightUm) continue;
+      for (const splitMode of ['vertical-first', 'horizontal-first'] as const) {
+        const remaining = sheet.freeRects.filter((_, index) => index !== rectIndex);
+        const nextFreeRects = pruneFreeRects([...remaining, ...splitAfterPlacement(rect, orientation.widthUm, orientation.heightUm, kerfUm, splitMode)]);
+        const score = scoreCandidate(rect, orientation.widthUm, orientation.heightUm, nextFreeRects);
+        if (!best || score < best.score) best = { rect, rectIndex, ...orientation, nextFreeRects, score };
       }
     }
   }
   if (best === null) return false;
   const candidate = best;
-  sheet.freeRects.splice(candidate.rectIndex, 1);
   const placement: SheetPlacement = {
     partId: part.partId,
     partLabel: part.label,
@@ -170,11 +223,7 @@ function placeInSheet(sheet: WorkingSheet, part: PartInstance, kerfUm: number): 
     edgeBanding: part.edgeBanding
   };
   sheet.placements.push(placement);
-  const rightWidth = candidate.rect.widthUm - candidate.widthUm - kerfUm;
-  const bottomHeight = candidate.rect.heightUm - candidate.heightUm - kerfUm;
-  if (rightWidth > 0) sheet.freeRects.push({ xUm: candidate.rect.xUm + candidate.widthUm + kerfUm, yUm: candidate.rect.yUm, widthUm: rightWidth, heightUm: candidate.heightUm });
-  if (bottomHeight > 0) sheet.freeRects.push({ xUm: candidate.rect.xUm, yUm: candidate.rect.yUm + candidate.heightUm + kerfUm, widthUm: candidate.rect.widthUm, heightUm: bottomHeight });
-  sheet.freeRects = sheet.freeRects.filter((rect) => rect.widthUm > 0 && rect.heightUm > 0).sort((a, b) => b.widthUm * b.heightUm - a.widthUm * a.heightUm);
+  sheet.freeRects = candidate.nextFreeRects;
   return true;
 }
 
@@ -190,6 +239,7 @@ function orderParts(parts: PartInstance[], order: string): PartInstance[] {
     if (order === 'long-edge') return Math.max(b.widthUm, b.heightUm) - Math.max(a.widthUm, a.heightUm) || b.widthUm * b.heightUm - a.widthUm * a.heightUm;
     if (order === 'wide-first') return b.widthUm - a.widthUm || b.heightUm - a.heightUm;
     if (order === 'tall-first') return b.heightUm - a.heightUm || b.widthUm - a.widthUm;
+    if (order === 'short-edge') return Math.min(b.widthUm, b.heightUm) - Math.min(a.widthUm, a.heightUm) || b.widthUm * b.heightUm - a.widthUm * a.heightUm;
     return b.widthUm * b.heightUm - a.widthUm * a.heightUm;
   });
 }
@@ -264,7 +314,7 @@ function packWithOrder(input: SheetProjectInput, order: string, started: number)
   const totalPartAreaUm2 = cleanedSheets.reduce((sum, sheet) => sum + sheet.placements.reduce((partSum, placement) => partSum + placement.widthUm * placement.heightUm, 0), 0);
   const yieldRate = totalStockAreaUm2 ? totalPartAreaUm2 / totalStockAreaUm2 : 0;
   return {
-    algorithm: `Practical guillotine multi-order layout (${order}), kerf-aware spacing, multi-stock aware, strategy: ${strategy}`,
+    algorithm: `Guillotine multi-split layout (${order}), kerf-aware spacing, multi-stock aware, strategy: ${strategy}`,
     durationMs: Math.round(performance.now() - started),
     sheetsUsed: cleanedSheets,
     unplacedParts,
@@ -279,7 +329,7 @@ function packWithOrder(input: SheetProjectInput, order: string, started: number)
 
 export function optimizeSheetProject(input: SheetProjectInput): SheetOptimizationResult {
   const started = performance.now();
-  const attempts = ['strategy', 'area', 'long-edge', 'wide-first', 'tall-first', 'locked-first'];
+  const attempts = ['strategy', 'area', 'long-edge', 'wide-first', 'tall-first', 'locked-first', 'short-edge'];
   let best: SheetOptimizationResult | null = null;
   for (const order of attempts) {
     const result = packWithOrder(input, order, started);

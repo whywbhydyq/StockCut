@@ -50,8 +50,7 @@ function parseStockOption(stock: LinearStockInput, unit: LinearProjectInput['uni
   return { option: { input: stock, lengthUm: length.valueUm, usableLengthUm, quantity: Math.min(quantity.value, 999), opened: 0, material: stock.material, cost: parseCost(stock.cost), isOffcut: stock.isOffcut } };
 }
 
-export function optimizeLinearProject(input: LinearProjectInput): LinearOptimizationResult {
-  const started = performance.now();
+function packLinearProject(input: LinearProjectInput, order: string, started: number): LinearOptimizationResult {
   const kerf = parseDimension(input.kerf || '0', input.unit);
   const warnings: OptimizationWarning[] = [];
   if (!kerf.ok) {
@@ -66,6 +65,9 @@ export function optimizeLinearProject(input: LinearProjectInput): LinearOptimiza
   const { cuts, warnings: cutWarnings } = expandCuts(input.parts, input.unit);
   const strategy = input.strategy ?? 'least_waste';
   const orderedCuts = [...cuts].sort((a, b) => {
+    if (order === 'short-first') return a.lengthUm - b.lengthUm;
+    if (order === 'material-then-long') return normalizeMaterial(a.material).localeCompare(normalizeMaterial(b.material)) || b.lengthUm - a.lengthUm;
+    if (order === 'miter-then-long') return String(a.miterAngle ?? '').localeCompare(String(b.miterAngle ?? '')) || b.lengthUm - a.lengthUm;
     if (strategy === 'fewer_cuts') return b.lengthUm - a.lengthUm;
     return b.lengthUm - a.lengthUm;
   });
@@ -130,7 +132,7 @@ export function optimizeLinearProject(input: LinearProjectInput): LinearOptimiza
   const totalCutLengthUm = stocks.reduce((sum, stock) => sum + stock.cuts.reduce((cutSum, cut) => cutSum + cut.lengthUm, 0), 0);
   const totalKerfLossUm = stocks.reduce((sum, stock) => sum + stock.kerfCount * kerf.valueUm, 0);
   return {
-    algorithm: `Best-fit decreasing, kerf-aware, multi-stock aware, strategy: ${strategy}`,
+    algorithm: `Best-fit multi-order linear layout (${order}), kerf-aware, multi-stock aware, strategy: ${strategy}`,
     durationMs: Math.round(performance.now() - started),
     stocksUsed: stocks,
     unplacedCuts,
@@ -141,4 +143,24 @@ export function optimizeLinearProject(input: LinearProjectInput): LinearOptimiza
     wasteRate: totalStockLengthUm ? 1 - totalCutLengthUm / totalStockLengthUm : 1,
     warnings
   };
+}
+
+
+function scoreLinearResult(result: LinearOptimizationResult): number {
+  return result.unplacedCuts.length * 1_000_000_000
+    + result.stocksUsed.length * 1_000_000
+    + Math.round(result.wasteRate * 100_000)
+    + result.stocksUsed.reduce((sum, stock) => sum + Math.max(0, stock.wasteLengthUm), 0) / 1_000_000;
+}
+
+export function optimizeLinearProject(input: LinearProjectInput): LinearOptimizationResult {
+  const started = performance.now();
+  const attempts = ['long-first', 'short-first', 'material-then-long', 'miter-then-long'];
+  let best: LinearOptimizationResult | null = null;
+  for (const order of attempts) {
+    const result = packLinearProject(input, order, started);
+    if (!best || scoreLinearResult(result) < scoreLinearResult(best)) best = result;
+    if (best.unplacedCuts.length === 0 && best.wasteRate === 0) break;
+  }
+  return best ?? packLinearProject(input, 'long-first', started);
 }

@@ -30,7 +30,8 @@ export function HomeHeader() {
 
   const openImport = () => {
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('stockcut:open-import'));
+      window.sessionStorage.setItem('stockcut-open-import', '1');
+      if (isHome) window.requestAnimationFrame(() => window.dispatchEvent(new CustomEvent('stockcut:open-import')));
     }
   };
 
@@ -41,6 +42,7 @@ export function HomeHeader() {
         <nav className="sc4-nav" aria-label="Primary navigation">
           <Link href="/#sheet" className={navClass(isHome && (active === '#sheet' || active === ''))}>Sheet</Link>
           <Link href="/#linear" className={navClass(isHome && active === '#linear')}>Linear</Link>
+          <Link href="/#tube" className={navClass(isHome && active === '#tube')}>Tube</Link>
           <Link href="/saw-kerf-calculator" className={navClass(pathname === '/saw-kerf-calculator')}>Kerf</Link>
           <Link href="/#examples" className={navClass(isHome && active === '#examples')}>Examples</Link>
           <Link href="/#import" onClick={openImport} className={navClass(isHome && active === '#import')}>↥ Import</Link>

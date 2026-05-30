@@ -1,7 +1,5 @@
-import type { Metadata } from 'next';
-import { PageShell } from '@/components/page/PageShell';
-import { pageBySlug } from '@/data/pages';
+import { redirect } from 'next/navigation';
 
-const page = pageBySlug('/calculators/closet-shelf-plywood-calculator');
-export const metadata: Metadata = { title: page.title, description: page.description, alternates: { canonical: page.slug }, openGraph: { title: page.title, description: page.description, url: page.slug } };
-export default function Page() { return <PageShell page={page} />; }
+export default function Page() {
+  redirect('/closet-shelf-plywood-calculator');
+}

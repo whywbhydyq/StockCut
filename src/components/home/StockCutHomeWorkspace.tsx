@@ -4,20 +4,17 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import type { DisplayUnit, LinearOptimizationResult, LinearPartInput, LinearProjectInput, SheetOptimizationResult, SheetPartInput, SheetProjectInput } from '@/core/types';
 import { sheetPresets, linearPresets } from '@/data/presets';
-import { optimizeSheetProject } from '@/core/sheet-optimizer/guillotine';
-import { optimizeLinearProject } from '@/core/linear-optimizer/bestFitDecreasing';
+import { runLinearOptimizationInWorker, runSheetOptimizationInWorker, type WorkerProgress } from '@/core/worker/optimizerWorkerClient';
 import { formatDimension, formatPercent } from '@/core/units/formatDimension';
 import { parseSheetPaste, parseLinearPaste } from '@/core/import/parsePaste';
-import { parseSheetWorkbookFile, parseLinearWorkbookFile } from '@/core/import/parseWorkbook';
-import { exportSheetResultCsv, exportLinearResultCsv, downloadText } from '@/core/export/exportCsv';
-import { downloadSheetPdf, downloadLinearPdf } from '@/core/export/exportPdf';
-import { downloadSheetDxf } from '@/core/export/exportDxf';
 import { loadProject, saveProject } from '@/core/storage/projectStorage';
 import { buildShareUrl } from '@/core/storage/shareProject';
 import { trackEvent } from '@/core/analytics/trackEvent';
 
 const SHEET_STORAGE_KEY = 'sc6-sheet-workspace-v6';
 const LINEAR_STORAGE_KEY = 'sc6-linear-workspace-v6';
+const LUMBER_STORAGE_KEY = 'sc6-lumber-workspace-v7';
+const TUBE_STORAGE_KEY = 'sc6-tube-workspace-v7';
 
 type HomeMode = 'sheet' | 'lumber' | 'tube';
 type ActiveResult =
@@ -201,17 +198,33 @@ function LinearResultPreview({ result, unit }: { result: LinearOptimizationResul
   );
 }
 
-function IconButton({ children, disabled, onClick }: { children: ReactNode; disabled?: boolean; onClick?: () => void }) {
+function IconButton({ children, disabled, onClick }: { children: ReactNode; disabled?: boolean; onClick?: () => void | Promise<void> }) {
   return <button type="button" disabled={disabled} onClick={onClick} className="sc4-action-button">{children}</button>;
+}
+
+function downloadClientText(filename: string, content: string, type: string): void {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 export function StockCutHomeWorkspace() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cancelOptimizationRef = useRef<(() => void) | null>(null);
+  const optimizeRunIdRef = useRef(0);
   const [mode, setMode] = useState<HomeMode>('sheet');
   const [sheetProject, setSheetProject] = useState<SheetProjectInput>(() => createHomeSheetProject());
-  const [linearProject, setLinearProject] = useState<LinearProjectInput>(() => createHomeLinearProject('lumber'));
+  const [lumberProject, setLumberProject] = useState<LinearProjectInput>(() => createHomeLinearProject('lumber'));
+  const [tubeProject, setTubeProject] = useState<LinearProjectInput>(() => createHomeLinearProject('tube'));
+  const linearProject = mode === 'tube' ? tubeProject : lumberProject;
+  const setLinearProject = mode === 'tube' ? setTubeProject : setLumberProject;
   const [result, setResult] = useState<ActiveResult>(null);
   const [error, setError] = useState<string | null>(null);
+  const [modeNotice, setModeNotice] = useState<string | null>(null);
+  const [workerProgress, setWorkerProgress] = useState<WorkerProgress | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [paste, setPaste] = useState('');
   const [pendingImport, setPendingImport] = useState<ImportPreview>(null);
@@ -219,7 +232,8 @@ export function StockCutHomeWorkspace() {
 
   useEffect(() => {
     setSheetProject(loadProject(SHEET_STORAGE_KEY, createHomeSheetProject()));
-    setLinearProject(loadProject(LINEAR_STORAGE_KEY, createHomeLinearProject('lumber')));
+    setLumberProject(loadProject(LUMBER_STORAGE_KEY, loadProject(LINEAR_STORAGE_KEY, createHomeLinearProject('lumber'))));
+    setTubeProject(loadProject(TUBE_STORAGE_KEY, createHomeLinearProject('tube')));
   }, []);
 
   useEffect(() => {
@@ -254,12 +268,18 @@ export function StockCutHomeWorkspace() {
       setError(null);
       window.requestAnimationFrame(() => fileInputRef.current?.click());
     };
+    const shouldOpenFromNavigation = window.location.hash === '#import' || window.sessionStorage.getItem('stockcut-open-import') === '1';
+    if (shouldOpenFromNavigation) {
+      window.sessionStorage.removeItem('stockcut-open-import');
+      window.requestAnimationFrame(openImport);
+    }
     window.addEventListener('stockcut:open-import', openImport);
     return () => window.removeEventListener('stockcut:open-import', openImport);
   }, []);
 
   useEffect(() => saveProject(SHEET_STORAGE_KEY, sheetProject), [sheetProject]);
-  useEffect(() => saveProject(LINEAR_STORAGE_KEY, linearProject), [linearProject]);
+  useEffect(() => saveProject(LUMBER_STORAGE_KEY, lumberProject), [lumberProject]);
+  useEffect(() => saveProject(TUBE_STORAGE_KEY, tubeProject), [tubeProject]);
 
   const activeProject = isLinearMode(mode) ? linearProject : sheetProject;
   const isSheetResult = result?.kind === 'sheet';
@@ -288,23 +308,30 @@ export function StockCutHomeWorkspace() {
   }, [result]);
 
   const clearOutput = () => {
+    cancelOptimizationRef.current?.();
+    cancelOptimizationRef.current = null;
+    setWorkerProgress(null);
     setResult(null);
     setError(null);
+    setModeNotice(null);
   };
 
-  const setModeAndPreset = (nextMode: HomeMode) => {
+  const selectMode = (nextMode: HomeMode) => {
+    if (nextMode === mode) return;
+    cancelOptimizationRef.current?.();
+    cancelOptimizationRef.current = null;
+    setWorkerProgress(null);
     setMode(nextMode);
     setResult(null);
     setError(null);
     setPendingImport(null);
     setPasteOpen(false);
     setPaste('');
+    const label = nextMode === 'sheet' ? 'Sheet goods' : nextMode === 'tube' ? 'Pipe / tube / bar' : 'Boards / lumber';
+    setModeNotice(`${label} draft restored. Use the sample button if you want to replace it.`);
     window.history.replaceState(null, '', `#${nextMode === 'sheet' ? 'sheet' : nextMode === 'tube' ? 'tube' : 'linear'}`);
     window.dispatchEvent(new HashChangeEvent('hashchange'));
-    if (nextMode === 'sheet') setSheetProject(createHomeSheetProject());
-    if (nextMode === 'lumber') setLinearProject(createHomeLinearProject('lumber'));
-    if (nextMode === 'tube') setLinearProject(createHomeLinearProject('tube'));
-    trackEvent('sample_loaded', { mode: nextMode, sample: 'sc4-mode-switch' });
+    trackEvent('mode_switched', { mode: nextMode, source: 'home', preservedDraft: true });
   };
 
   const updateSheetStock = (patch: Partial<SheetProjectInput['stock']>) => { clearOutput(); setSheetProject((project) => ({ ...project, stock: { ...project.stock, ...patch } })); };
@@ -314,21 +341,53 @@ export function StockCutHomeWorkspace() {
 
   const generate = () => {
     setError(null);
+    setModeNotice(null);
     setPendingImport(null);
-    try {
-      if (isLinearMode(mode)) {
-        trackEvent('optimize_linear_clicked', { source: 'home', mode });
-        const nextResult = optimizeLinearProject(linearProject);
+    cancelOptimizationRef.current?.();
+    const runId = optimizeRunIdRef.current + 1;
+    optimizeRunIdRef.current = runId;
+    setWorkerProgress({ percent: 1, message: 'Preparing optimization.' });
+    if (isLinearMode(mode)) {
+      trackEvent('optimize_linear_clicked', { source: 'home', mode });
+      const worker = runLinearOptimizationInWorker(linearProject, setWorkerProgress);
+      cancelOptimizationRef.current = worker.cancel;
+      void worker.promise.then((nextResult) => {
+        if (optimizeRunIdRef.current !== runId) return;
+        cancelOptimizationRef.current = null;
+        setWorkerProgress(null);
         setResult({ kind: 'linear', result: nextResult });
-      } else {
-        trackEvent('optimize_sheet_clicked', { source: 'home', mode });
-        const nextResult = optimizeSheetProject(sheetProject);
-        setResult({ kind: 'sheet', result: nextResult });
-      }
-    } catch (caught) {
+      }).catch((caught: unknown) => {
+        if (optimizeRunIdRef.current !== runId) return;
+        cancelOptimizationRef.current = null;
+        setWorkerProgress(null);
+        setResult(null);
+        setError(caught instanceof Error ? caught.message : 'Optimization failed. Check dimensions, quantity, and kerf.');
+      });
+      return;
+    }
+    trackEvent('optimize_sheet_clicked', { source: 'home', mode });
+    const worker = runSheetOptimizationInWorker(sheetProject, setWorkerProgress);
+    cancelOptimizationRef.current = worker.cancel;
+    void worker.promise.then((nextResult) => {
+      if (optimizeRunIdRef.current !== runId) return;
+      cancelOptimizationRef.current = null;
+      setWorkerProgress(null);
+      setResult({ kind: 'sheet', result: nextResult });
+    }).catch((caught: unknown) => {
+      if (optimizeRunIdRef.current !== runId) return;
+      cancelOptimizationRef.current = null;
+      setWorkerProgress(null);
       setResult(null);
       setError(caught instanceof Error ? caught.message : 'Optimization failed. Check dimensions, quantity, and kerf.');
-    }
+    });
+  };
+
+  const cancelOptimization = () => {
+    optimizeRunIdRef.current += 1;
+    cancelOptimizationRef.current?.();
+    cancelOptimizationRef.current = null;
+    setWorkerProgress(null);
+    setError('Optimization cancelled.');
   };
 
   const loadSheetSample = () => {
@@ -347,7 +406,9 @@ export function StockCutHomeWorkspace() {
   const loadLinearSample = (sample: 'lumber-length' | 'pvc-pipe' | 'steel-tube' | 'aluminum-extrusion') => {
     const nextMode: HomeMode = sample === 'lumber-length' ? 'lumber' : 'tube';
     setMode(nextMode);
-    setLinearProject(sample === 'lumber-length' ? createHomeLinearProject('lumber') : (() => { const project = cloneProject(linearPresets[sample]); delete project.extraStocks; project.stock.cost = ''; return project; })());
+    const nextProject = sample === 'lumber-length' ? createHomeLinearProject('lumber') : (() => { const project = cloneProject(linearPresets[sample]); delete project.extraStocks; project.stock.cost = ''; return project; })();
+    if (nextMode === 'lumber') setLumberProject(nextProject);
+    else setTubeProject(nextProject);
     setResult(null);
     setError(null);
     setPendingImport(null);
@@ -407,8 +468,8 @@ export function StockCutHomeWorkspace() {
   const importFile = (file?: File) => {
     if (!file) return;
     setError(null);
-    const isWorkbook = /\.xlsx?$/.test(file.name.toLowerCase());
-    const isJson = /\.json$/.test(file.name.toLowerCase()) || file.type === 'application/json';
+    const isWorkbook = /\.(xlsx|xls)$/i.test(file.name);
+    const isJson = /\.json$/i.test(file.name) || file.type === 'application/json';
     if (isJson) {
       void file.text().then((text) => {
         const parsed = JSON.parse(text) as SheetProjectInput | LinearProjectInput;
@@ -425,12 +486,18 @@ export function StockCutHomeWorkspace() {
     }
     if (isLinearMode(mode)) {
       const apply = (rows: LinearPartInput[]) => { setResult(null); setError(null); setPendingImport({ kind: 'linear', rows }); setPasteOpen(true); };
-      if (isWorkbook) void parseLinearWorkbookFile(file).then((parsed) => parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n'))).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read Excel file.'));
+      if (isWorkbook) void import('@/core/import/parseWorkbook')
+        .then(({ parseLinearWorkbookFile }) => parseLinearWorkbookFile(file))
+        .then((parsed) => parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n')))
+        .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read Excel workbook.'));
       else void file.text().then((text) => { const parsed = parseLinearPaste(text); parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n')); }).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read CSV file.'));
       return;
     }
     const apply = (rows: SheetPartInput[]) => { setResult(null); setError(null); setPendingImport({ kind: 'sheet', rows }); setPasteOpen(true); };
-    if (isWorkbook) void parseSheetWorkbookFile(file).then((parsed) => parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n'))).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read Excel file.'));
+    if (isWorkbook) void import('@/core/import/parseWorkbook')
+      .then(({ parseSheetWorkbookFile }) => parseSheetWorkbookFile(file))
+      .then((parsed) => parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n')))
+      .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read Excel workbook.'));
     else void file.text().then((text) => { const parsed = parseSheetPaste(text); parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n')); }).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read CSV file.'));
   };
 
@@ -444,26 +511,68 @@ export function StockCutHomeWorkspace() {
     const text = result.kind === 'sheet'
       ? `StockCut: ${result.result.sheetsUsed.length} sheets, yield ${formatPercent(result.result.yieldRate)}, waste ${formatPercent(result.result.wasteRate)}, unplaced ${result.result.unplacedParts.length}.`
       : `StockCut: ${result.result.stocksUsed.length} stock lengths, waste ${formatPercent(result.result.wasteRate)}, unplaced ${result.result.unplacedCuts.length}.`;
-    void navigator.clipboard.writeText(text).then(() => markCopied('summary'));
+    void navigator.clipboard.writeText(text).then(() => markCopied('summary')).catch(() => setError('Copy failed. Select the summary text and copy manually.'));
   };
 
   const copyShareLink = () => {
     const link = isLinearMode(mode) ? buildShareUrl('linear-1d', linearProject) : buildShareUrl('sheet-2d', sheetProject);
-    void navigator.clipboard.writeText(link).then(() => markCopied('share'));
+    void navigator.clipboard.writeText(link).then(() => markCopied('share')).catch(() => setError('Copy failed. Download the project JSON instead, or copy the browser address manually.'));
     trackEvent('share_link_created', { mode: isLinearMode(mode) ? 'linear' : 'sheet', source: 'home' });
   };
 
-  const exportCsv = () => {
-    if (result?.kind === 'sheet') downloadText('stockcut-sheet-result.csv', exportSheetResultCsv(result.result, sheetProject.unit), 'text/csv');
-    if (result?.kind === 'linear') downloadText('stockcut-linear-result.csv', exportLinearResultCsv(result.result, linearProject.unit), 'text/csv');
+  const confirmPartialExport = (format: string): boolean => {
+    if (!result || unplacedCount === 0) return true;
+    return window.confirm(`This is a partial layout with ${unplacedCount} unplaced item${unplacedCount === 1 ? '' : 's'}. The ${format} export will include placed items plus an unplaced section. Continue?`);
   };
 
-  const downloadPdf = () => {
-    if (result?.kind === 'sheet') void downloadSheetPdf(sheetProject, result.result);
-    if (result?.kind === 'linear') void downloadLinearPdf(linearProject, result.result);
+  const exportCsv = async () => {
+    if (!result || !confirmPartialExport('CSV')) return;
+    const { exportSheetResultCsv, exportLinearResultCsv, downloadText } = await import('@/core/export/exportCsv');
+    if (result.kind === 'sheet') downloadText(result.result.unplacedParts.length ? 'stockcut-sheet-partial-result.csv' : 'stockcut-sheet-result.csv', exportSheetResultCsv(result.result, sheetProject.unit), 'text/csv');
+    if (result.kind === 'linear') downloadText(result.result.unplacedCuts.length ? 'stockcut-linear-partial-result.csv' : 'stockcut-linear-result.csv', exportLinearResultCsv(result.result, linearProject.unit), 'text/csv');
   };
 
-  const exportJson = () => downloadText('stockcut-project.json', JSON.stringify(activeProject, null, 2), 'application/json');
+  const downloadPdf = async () => {
+    if (!result || !confirmPartialExport('PDF')) return;
+    const { downloadSheetPdf, downloadLinearPdf } = await import('@/core/export/exportPdf');
+    if (result.kind === 'sheet') await downloadSheetPdf(sheetProject, result.result);
+    if (result.kind === 'linear') await downloadLinearPdf(linearProject, result.result);
+  };
+
+  const downloadDxf = async () => {
+    if (result?.kind !== 'sheet' || !confirmPartialExport('DXF')) return;
+    const { downloadSheetDxf } = await import('@/core/export/exportDxf');
+    downloadSheetDxf(result.result);
+  };
+
+  const exportJson = () => downloadClientText('stockcut-project.json', JSON.stringify(activeProject, null, 2), 'application/json');
+
+  const bumpQuantity = (value: string): string => {
+    const parsed = Number(String(value || '').trim());
+    return String(Number.isFinite(parsed) && parsed > 0 ? Math.ceil(parsed) + 1 : 2);
+  };
+
+  const addOneStockForUnplaced = () => {
+    clearOutput();
+    if (isLinearMode(mode)) {
+      setLinearProject((project) => ({ ...project, stock: { ...project.stock, quantity: bumpQuantity(project.stock.quantity) } }));
+      setModeNotice('Added one more stock length. Run Generate again to retry the unplaced cuts.');
+      return;
+    }
+    setSheetProject((project) => ({ ...project, stock: { ...project.stock, quantity: bumpQuantity(project.stock.quantity) } }));
+    setModeNotice('Added one more sheet. Run Generate again to retry the unplaced parts.');
+  };
+
+  const allowRotationForUnplacedParts = () => {
+    if (result?.kind !== 'sheet') return;
+    const unplacedIds = new Set(result.result.unplacedParts.map((part) => part.partId));
+    clearOutput();
+    setSheetProject((project) => ({
+      ...project,
+      parts: project.parts.map((part) => unplacedIds.has(part.id) && (part.grainLock ?? 'none') === 'none' ? { ...part, allowRotation: true } : part)
+    }));
+    setModeNotice('Rotation enabled for unplaced sheet parts where grain is not locked. Run Generate again.');
+  };
 
   const warnings = result?.kind === 'sheet' ? result.result.warnings : result?.kind === 'linear' ? result.result.warnings : [];
   const hasResult = Boolean(result);
@@ -475,6 +584,7 @@ export function StockCutHomeWorkspace() {
   const unplacedCount = result?.kind === 'sheet' ? result.result.unplacedParts.length : result?.kind === 'linear' ? result.result.unplacedCuts.length : 0;
   const hasPlacedOutput = placedCount > 0;
   const hasCompleteOutput = hasPlacedOutput && unplacedCount === 0;
+  const hasRotationFix = result?.kind === 'sheet' && result.result.warnings.some((warning) => warning.code === 'ROTATION_LOCKED_WOULD_FIT_IF_ROTATED');
   const previewTitle = !hasResult
     ? 'Preview will appear here after calculation'
     : hasCompleteOutput
@@ -504,7 +614,7 @@ export function StockCutHomeWorkspace() {
           ['lumber', 'Boards / lumber', '2×4 · rails · shelves · straight stock'],
           ['tube', 'Pipe / tube / bar', 'PVC · steel tube · aluminum extrusion']
         ] as Array<[HomeMode, string, string]>).map(([key, title, description]) => (
-          <button key={key} type="button" className={`sc4-mode-card ${mode === key ? 'is-active' : ''}`} onClick={() => setModeAndPreset(key)}>
+          <button key={key} type="button" className={`sc4-mode-card ${mode === key ? 'is-active' : ''}`} onClick={() => selectMode(key)}>
             {iconForMode(key)}
             <span><strong>{title}</strong><small>{description}</small></span>
             <span className="sc4-radio">{mode === key ? '✓' : ''}</span>
@@ -571,9 +681,11 @@ export function StockCutHomeWorkspace() {
             </>
           )}
 
+          {modeNotice && <div className="sc4-notice">{modeNotice}</div>}
           {error && <pre className="sc4-error">{error}</pre>}
+          {workerProgress && <div className="sc4-progress"><div><strong>{workerProgress.message}</strong><span>{workerProgress.percent}%</span></div><progress max={100} value={workerProgress.percent}>{workerProgress.percent}%</progress><button type="button" onClick={cancelOptimization}>Cancel</button></div>}
 
-          <button type="button" className="sc4-generate" onClick={generate}>▦ {isLinearMode(mode) ? 'Generate cutting sequence' : 'Generate cut layout'}<small>Create optimized layout, cut list, and waste estimate</small></button>
+          <button type="button" className="sc4-generate" onClick={generate} disabled={Boolean(workerProgress)}>▦ {workerProgress ? 'Optimizing…' : isLinearMode(mode) ? 'Generate cutting sequence' : 'Generate cut layout'}<small>Create multi-order layout, cut list, and waste estimate</small></button>
 
           <div className="sc4-secondary-actions">
             <button type="button" onClick={isLinearMode(mode) ? () => loadLinearSample(mode === 'tube' ? 'pvc-pipe' : 'lumber-length') : loadSheetSample}>{isLinearMode(mode) ? (mode === 'tube' ? 'PVC pipe sample' : '8 ft lumber sample') : 'Load 4×8 plywood sample'}</button>
@@ -614,16 +726,17 @@ export function StockCutHomeWorkspace() {
 
       <section className="sc4-bottom-grid" id="examples">
         <div className="sc4-bottom-card">
-          <h3>Exports and shop output</h3><p>{hasPlacedOutput ? 'Print, PDF, CSV, share link, DXF and more' : hasResult ? 'No placed layout yet. Fix the warnings before printing or exporting a cut list.' : 'Generate a layout first, then print or export your cut list.'}</p>
+          <h3>Exports and shop output</h3><p>{hasCompleteOutput ? 'Print, PDF, CSV, share link, DXF and more' : hasPlacedOutput ? 'Partial layout found. Fix unplaced parts or confirm before exporting.' : hasResult ? 'No placed layout yet. Fix the warnings before printing or exporting a cut list.' : 'Generate a layout first, then print or export your cut list.'}</p>
+          {hasPlacedOutput && unplacedCount > 0 && <div className="sc4-export-warning"><strong>{unplacedCount} item{unplacedCount === 1 ? '' : 's'} unplaced.</strong><span>You can fix the inputs first, or export a clearly marked partial report after confirmation.</span><div className="sc4-fix-buttons"><button type="button" onClick={addOneStockForUnplaced}>Add one more stock</button>{hasRotationFix && <button type="button" onClick={allowRotationForUnplacedParts}>Allow rotation and retry</button>}</div></div>}
           {hasPlacedOutput ? (
             <>
               <div className="sc4-export-grid">
-                <IconButton onClick={() => window.print()}>▣ Print / Save PDF</IconButton>
-                <IconButton onClick={downloadPdf}>⇩ Download PDF</IconButton>
-                <IconButton onClick={exportCsv}>▤ Export CSV</IconButton>
+                <IconButton disabled={!hasPlacedOutput} onClick={() => { if (confirmPartialExport('browser print')) window.print(); }}>▣ Print / Save PDF</IconButton>
+                <IconButton disabled={!hasPlacedOutput} onClick={downloadPdf}>⇩ Download PDF</IconButton>
+                <IconButton disabled={!hasPlacedOutput} onClick={exportCsv}>▤ Export CSV</IconButton>
                 <IconButton onClick={copySummary}>▢ {copyStatus === 'summary' ? 'Copied summary' : 'Copy summary'}</IconButton>
                 <IconButton onClick={copyShareLink}>↗ {copyStatus === 'share' ? 'Copied link' : 'Copy share link'}</IconButton>
-                <IconButton disabled={!isSheetResult} onClick={() => result?.kind === 'sheet' && downloadSheetDxf(result.result)}>DXF Download</IconButton>
+                <IconButton disabled={!isSheetResult || !hasPlacedOutput} onClick={downloadDxf}>DXF Download</IconButton>
               </div>
               <details className="sc4-more"><summary>More exports</summary><button type="button" onClick={exportJson}>Download project JSON</button></details>
             </>
@@ -656,6 +769,16 @@ export function StockCutHomeWorkspace() {
           <a href="/lumber-length-cutting-optimizer">Lumber length cutting optimizer</a>
           <a href="/steel-tube-cutting-optimizer">Steel tube cutting optimizer</a>
           <a href="/saw-kerf-calculator">Saw kerf calculator</a>
+        </div>
+      </section>
+
+
+      <section className="sc4-faq" aria-label="StockCut FAQ">
+        <h2>StockCut FAQ</h2>
+        <div>
+          <details><summary>Can I optimize 4×8 plywood sheets?</summary><p>Yes. Use Sheet goods mode, load the 4×8 plywood sample, then replace the sample parts with your own cabinet, shelf, panel, or acrylic parts.</p></details>
+          <details><summary>Can I use StockCut for pipe, tube, bar, or lumber?</summary><p>Yes. Boards / lumber and Pipe / tube / bar modes keep separate drafts and generate straight-stock cutting sequences with kerf, waste, and unplaced-cut warnings.</p></details>
+          <details><summary>Does StockCut upload my cut list?</summary><p>No. Optimization runs in your browser. Your drafts are saved locally unless you choose to export a file or copy a share link.</p></details>
         </div>
       </section>
 

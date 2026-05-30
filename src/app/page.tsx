@@ -46,9 +46,9 @@ const jsonLd = {
     {
       '@type': 'FAQPage',
       mainEntity: [
-        { '@type': 'Question', name: 'Can I optimize 4x8 plywood sheets?', acceptedAnswer: { '@type': 'Answer', text: 'Yes. Enter a 48 x 96 inch sheet, kerf, and rectangular parts to generate a printable cut layout and waste estimate.' } },
-        { '@type': 'Question', name: 'Can I use StockCut for pipe or tube cutting?', acceptedAnswer: { '@type': 'Answer', text: 'Yes. Switch to pipe, tube, bar, or lumber mode to optimize straight stock lengths with kerf and cut sequence output.' } },
-        { '@type': 'Question', name: 'Does StockCut upload my cut list?', acceptedAnswer: { '@type': 'Answer', text: 'No. StockCut calculations run in the browser and project data is saved locally unless you choose to export or share it.' } }
+        { '@type': 'Question', name: 'Can I optimize 4x8 plywood sheets?', acceptedAnswer: { '@type': 'Answer', text: 'Yes. Use Sheet goods mode, load the 4×8 plywood sample, then replace the sample parts with your own cabinet, shelf, panel, or acrylic parts.' } },
+        { '@type': 'Question', name: 'Can I use StockCut for pipe, tube, bar, or lumber?', acceptedAnswer: { '@type': 'Answer', text: 'Yes. Boards / lumber and Pipe / tube / bar modes keep separate drafts and generate straight-stock cutting sequences with kerf, waste, and unplaced-cut warnings.' } },
+        { '@type': 'Question', name: 'Does StockCut upload my cut list?', acceptedAnswer: { '@type': 'Answer', text: 'No. Optimization runs in your browser. Your drafts are saved locally unless you choose to export a file or copy a share link.' } }
       ]
     },
     {

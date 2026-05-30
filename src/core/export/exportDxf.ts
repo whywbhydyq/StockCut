@@ -16,6 +16,9 @@ export function sheetResultToDxf(result: SheetOptimizationResult): string {
   const gap = 250000;
   let offsetX = 0;
   let body = '0\nSECTION\n2\nENTITIES\n';
+  if (result.unplacedParts.length) {
+    body += text(`PARTIAL LAYOUT WARNING: ${result.unplacedParts.length} unplaced part${result.unplacedParts.length === 1 ? '' : 's'} are not included in cut geometry. Review the unplaced list before cutting.`, 0, -180000, 70000);
+  }
   for (const sheet of result.sheetsUsed) {
     body += rectangle(offsetX, 0, sheet.widthUm, sheet.heightUm, 'SHEET');
     body += text(`Sheet ${sheet.sheetIndex}: ${sheet.stockLabel}. Planning DXF only; not CNC toolpath or G-code.`, offsetX + 10000, -80000, 60000);
@@ -25,6 +28,13 @@ export function sheetResultToDxf(result: SheetOptimizationResult): string {
     }
     for (const offcut of sheet.offcuts.slice(0, 40)) body += rectangle(offsetX + offcut.xUm, offcut.yUm, offcut.widthUm, offcut.heightUm, 'OFFCUTS');
     offsetX += sheet.widthUm + gap;
+  }
+  if (result.unplacedParts.length) {
+    let y = -320000;
+    for (const part of result.unplacedParts.slice(0, 80)) {
+      body += text(`UNPLACED: ${part.label} - ${part.reason}`, 0, y, 50000);
+      y -= 70000;
+    }
   }
   return `${body}0\nENDSEC\n0\nEOF\n`;
 }
