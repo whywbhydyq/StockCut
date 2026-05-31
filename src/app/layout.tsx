@@ -24,6 +24,9 @@ export const metadata: Metadata = {
     title: 'StockCut Cut List Optimizer',
     description: siteDescription
   },
+  other: {
+    'baidu-site-verification': 'codeva-Kosxs1CyYp'
+  },
   manifest: '/manifest.webmanifest'
 };
 
@@ -31,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        <meta name="baidu-site-verification" content="codeva-Kosxs1CyYp" />
         <meta name="google-adsense-account" content="ca-pub-1653188471819736" />
       </head>
       <body>
