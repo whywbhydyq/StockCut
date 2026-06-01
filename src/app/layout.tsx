@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Script from 'next/script';
+import { AdSenseAutoAds } from '@/components/ads/AdSenseAutoAds';
 import { PwaRegister } from '@/components/common/PwaRegister';
 import { HomeHeader } from '@/components/home/HomeHeader';
 import './globals.css';
@@ -38,12 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="google-adsense-account" content="ca-pub-1653188471819736" />
       </head>
       <body>
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1653188471819736"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
+        <AdSenseAutoAds />
         <PwaRegister />
         <HomeHeader />
         {children}

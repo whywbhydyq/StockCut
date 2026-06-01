@@ -110,7 +110,7 @@ for (const slug of [
   assert.ok(longTailAudit.includes(`slug: '${slug}'`), `${slug} has priority long-tail audit coverage`);
 }
 assert.ok(read('docs/LONG_TAIL_PRESET_AUDIT.md').includes('/4x8-plywood-cut-list-optimizer'), 'long-tail audit document exists');
-assert.ok(read('docs/SEARCH_CONSOLE_REVIEW_PLAN.md').includes('4 weeks'), 'GSC review plan exists');
+assert.ok(read('docs/SEARCH_CONSOLE_REVIEW_PLAN.md').includes('Week 4'), 'GSC review plan exists');
 
 const css = read('src/app/globals.css');
 assert.ok(css.includes('@media print'), 'print CSS exists');
@@ -157,8 +157,16 @@ assert.equal(adsTxt, 'google.com, pub-1653188471819736, DIRECT, f08c47fec0942fa0
 const rootLayout = read('src/app/layout.tsx');
 assert.equal((rootLayout.match(/google-adsense-account/g) || []).length, 1, 'AdSense meta appears once');
 assert.ok(rootLayout.includes('ca-pub-1653188471819736'), 'AdSense publisher id exists');
-assert.equal((rootLayout.match(/pagead2\.googlesyndication\.com/g) || []).length, 1, 'AdSense Auto Ads script appears once');
-assert.equal((rootLayout.match(/adsbygoogle\.js/g) || []).length, 1, 'AdSense adsbygoogle script appears once');
+assert.ok(rootLayout.includes('<AdSenseAutoAds />'), 'AdSense Auto Ads route gate is mounted');
+assert.equal((rootLayout.match(/pagead2\.googlesyndication\.com/g) || []).length, 0, 'AdSense script is not globally loaded in root layout');
+assert.equal((rootLayout.match(/adsbygoogle\.js/g) || []).length, 0, 'adsbygoogle script is not globally loaded in root layout');
+const adsenseGate = read('src/components/ads/AdSenseAutoAds.tsx');
+assert.ok(adsenseGate.includes('usePathname'), 'AdSense gate is route-aware');
+assert.equal((adsenseGate.match(/pagead2\.googlesyndication\.com/g) || []).length, 1, 'AdSense Auto Ads script appears once in route gate');
+assert.equal((adsenseGate.match(/adsbygoogle\.js/g) || []).length, 1, 'AdSense adsbygoogle script appears once in route gate');
+for (const deniedPath of ['/about', '/privacy', '/terms', '/disclaimer', '/contact', '/404', '/_not-found']) {
+  assert.ok(adsenseGate.includes(`'${deniedPath}'`), `AdSense gate denies ${deniedPath}`);
+}
 
 assert.ok(read('src/components/common/ShopModeToggle.tsx').includes('Shop mode'), 'shop mode toggle exists');
 assert.ok(read('src/core/analytics/trackEvent.ts').includes('no_cut_list_dimensions_recorded'), 'privacy-safe event tracking exists');
