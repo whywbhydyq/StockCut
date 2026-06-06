@@ -1,5 +1,5 @@
-import type { LinearPresetKey, SheetPresetKey } from '@/data/presets';
-import { siteUrl } from '@/data/siteMeta';
+import type { LinearPresetKey, SheetPresetKey } from './presets';
+import { siteUrl } from './siteMeta';
 
 export type PageKind = 'sheet' | 'linear' | 'kerf' | 'guide' | 'legal' | 'about';
 
