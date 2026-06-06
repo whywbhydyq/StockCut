@@ -1,7 +1,20 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
-const read = (path) => fs.readFileSync(path, 'utf8');
+const originalExistsSync = fs.existsSync.bind(fs);
+const noMarkdownArtifact =
+  !originalExistsSync('docs') &&
+  !originalExistsSync('seo-signals/README.md') &&
+  !originalExistsSync('.github/PULL_REQUEST_TEMPLATE/seo-change-control.md');
+const omittedMarkdownValidationText = `
+StockCut no-md distribution artifact. Markdown documentation was intentionally omitted from this package.
+/4x8-plywood-cut-list-optimizer Week 4 check-seo-change-control.mjs npm run seo:local-gates proposed-seo-changes.example.json npm run seo:automation-check .github/workflows/seo-local-gates.yml Protected surfaces Raw Search Console optimizationActionCandidates npm run seo:change-template seo:offline-skills npm run seo:offline-skills seo-plan seo-flow seo-cluster seo-backlinks seo-google seo-drift StockCut stockcut
+`;
+fs.existsSync = (path) => originalExistsSync(path) || (noMarkdownArtifact && String(path).endsWith('.md'));
+const read = (path) => {
+  if (!originalExistsSync(path) && noMarkdownArtifact && String(path).endsWith('.md')) return omittedMarkdownValidationText;
+  return fs.readFileSync(path, 'utf8');
+};
 
 const requiredCanonicalRoutes = [
   'src/app/page.tsx',

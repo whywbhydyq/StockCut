@@ -1,5 +1,5 @@
 {
   "ignoreCommand": "node scripts/skip-old-vercel-builds.mjs",
   "framework": "nextjs",
-  "installCommand": "npm ci --ignore-scripts --no-audit --no-fund --cache /tmp/npm-cache --prefer-online"
+  "installCommand": "corepack enable && corepack prepare npm@10.8.2 --activate && npm --version && npm ci --ignore-scripts --no-audit --no-fund --cache /tmp/npm-cache-1082 --prefer-online"
 }

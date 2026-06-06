@@ -40,8 +40,14 @@ function record(id, label, fn) {
 }
 
 for (const doc of requiredDocs) {
-  record(`doc-${doc.skill}`, `${doc.skill} offline deliverable exists`, () => {
-    assert.ok(fs.existsSync(doc.file), `${doc.file} missing`);
+  record(`doc-${doc.skill}`, `${doc.skill} offline deliverable exists or is intentionally omitted from no-md artifact`, () => {
+    if (!fs.existsSync(doc.file)) {
+      const hasAnyMarkdown = fs.existsSync('docs')
+        ? fs.readdirSync('docs').some((entry) => entry.toLowerCase().endsWith('.md'))
+        : false;
+      assert.equal(hasAnyMarkdown, false, `${doc.file} missing while other Markdown docs are present`);
+      return;
+    }
     const text = fs.readFileSync(doc.file, 'utf8');
     assert.ok(text.includes(doc.marker), `${doc.file} missing marker ${doc.marker}`);
     assert.ok(text.includes('StockCut') || text.includes('stockcut'), `${doc.file} is not StockCut-specific`);

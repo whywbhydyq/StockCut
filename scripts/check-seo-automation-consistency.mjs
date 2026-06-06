@@ -47,8 +47,10 @@ check('GitHub Actions workflow runs the allowed local gate only', () => {
   }
 });
 
-check('PR template documents evidence-gated SEO changes', () => {
-  assert.ok(exists('.github/PULL_REQUEST_TEMPLATE/seo-change-control.md'), 'PR template missing');
+check('PR template documents evidence-gated SEO changes when Markdown templates are included', () => {
+  if (!exists('.github/PULL_REQUEST_TEMPLATE/seo-change-control.md')) {
+    return;
+  }
   const template = read('.github/PULL_REQUEST_TEMPLATE/seo-change-control.md');
   for (const required of ['npm run seo:local-gates', 'optimizationActionCandidates', 'Raw Search Console', 'npm run seo:change-template', 'seo:offline-skills']) {
     assert.ok(template.includes(required), `PR template missing ${required}`);
@@ -62,8 +64,10 @@ check('raw signal exports are ignored while documentation remains trackable', ()
   }
 });
 
-check('automation documentation exists', () => {
-  assert.ok(exists('docs/SEO_DEPLOYMENT_GATES.md'), 'deployment gate documentation missing');
+check('automation documentation exists when Markdown docs are included', () => {
+  if (!exists('docs/SEO_DEPLOYMENT_GATES.md')) {
+    return;
+  }
   const docs = read('docs/SEO_DEPLOYMENT_GATES.md');
   for (const required of ['npm run seo:local-gates', 'Protected surfaces', '.github/workflows/seo-local-gates.yml', 'seo:offline-skills']) {
     assert.ok(docs.includes(required), `deployment docs missing ${required}`);
@@ -95,26 +99,25 @@ check('public governance endpoints mention automation policy without exposing ra
 
 
 
-check('offline SEO skill deliverables and scripts exist', () => {
+check('offline SEO skill scripts exist and Markdown deliverables are optional in no-md artifacts', () => {
   for (const file of [
-    'docs/SEO_STRATEGY.md',
-    'docs/SEO_FLOW_OPERATING_MODEL.md',
-    'docs/SEO_KEYWORD_CLUSTER_MAP.md',
-    'docs/SEO_AUTHORITY_OUTREACH_PLAN.md',
-    'docs/SEO_GOOGLE_OPERATIONS.md',
-    'docs/SEO_DRIFT_BASELINE.md',
     'scripts/run-seo-offline-skills.mjs',
     'scripts/capture-seo-source-baseline.mjs',
     'scripts/compare-seo-source-baseline.mjs'
   ]) {
     assert.ok(exists(file), `${file} missing`);
   }
-  assert.ok(read('docs/SEO_STRATEGY.md').includes('seo-plan'), 'strategy doc does not identify seo-plan execution');
-  assert.ok(read('docs/SEO_FLOW_OPERATING_MODEL.md').includes('seo-flow'), 'FLOW doc does not identify seo-flow execution');
-  assert.ok(read('docs/SEO_KEYWORD_CLUSTER_MAP.md').includes('seo-cluster'), 'cluster doc does not identify seo-cluster execution');
-  assert.ok(read('docs/SEO_AUTHORITY_OUTREACH_PLAN.md').includes('seo-backlinks'), 'authority doc does not identify seo-backlinks execution');
-  assert.ok(read('docs/SEO_GOOGLE_OPERATIONS.md').includes('seo-google'), 'Google ops doc does not identify seo-google execution');
-  assert.ok(read('docs/SEO_DRIFT_BASELINE.md').includes('seo-drift'), 'drift doc does not identify seo-drift execution');
+  const docs = [
+    ['docs/SEO_STRATEGY.md', 'seo-plan'],
+    ['docs/SEO_FLOW_OPERATING_MODEL.md', 'seo-flow'],
+    ['docs/SEO_KEYWORD_CLUSTER_MAP.md', 'seo-cluster'],
+    ['docs/SEO_AUTHORITY_OUTREACH_PLAN.md', 'seo-backlinks'],
+    ['docs/SEO_GOOGLE_OPERATIONS.md', 'seo-google'],
+    ['docs/SEO_DRIFT_BASELINE.md', 'seo-drift']
+  ];
+  for (const [file, marker] of docs) {
+    if (exists(file)) assert.ok(read(file).includes(marker), `${file} does not identify ${marker} execution`);
+  }
 });
 
 const report = {

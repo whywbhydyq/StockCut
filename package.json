@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "npm@10.9.2",
+  "packageManager": "npm@10.8.2",
   "scripts": {
     "dev": "next dev",
     "build": "npm run typecheck && next build --no-lint",
