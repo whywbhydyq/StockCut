@@ -1,4 +1,5 @@
 {
   "ignoreCommand": "node scripts/skip-old-vercel-builds.mjs",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "installCommand": "npm ci --ignore-scripts --no-audit --no-fund --cache /tmp/npm-cache --prefer-online"
 }
