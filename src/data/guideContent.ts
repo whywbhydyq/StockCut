@@ -225,6 +225,44 @@ export const guideContentBySlug: Record<string, StockCutGuideContent> = {
       { href: '/4x8-plywood-cut-list-optimizer', label: '4x8 plywood cut list optimizer' },
       { href: '/reduce-plywood-waste', label: 'Reduce plywood waste' }
     ]
+  },
+  '/cut-list-optimization-methodology': {
+    lead: 'StockCut uses practical browser-side heuristics for planning cut lists. This methodology page explains what the calculators account for, what they intentionally do not claim, and which checks belong in the shop before any material is cut.',
+    sections: [
+      {
+        heading: 'Inputs the optimizer treats as material constraints',
+        body: ['The optimizer starts from finished part dimensions, stock dimensions, quantity, kerf, rotation permissions, reusable offcuts, and optional trim or cost fields. Finished part sizes stay unchanged; kerf is modeled as material removed between separate cuts or placements.'],
+        bullets: ['Sheet jobs use rectangular width and length values.', 'Linear jobs use straight lengths from boards, tube, pipe, rebar, extrusion, or bar stock.', 'Quantities are expanded after validation so repeated pieces are included in waste and fit checks.']
+      },
+      {
+        heading: 'How sheet layouts are planned',
+        body: ['Sheet layouts are designed for readable rectangular plans. The placement process favors shop-reviewable rectangles, labels, rotation checks, and unplaced-part warnings instead of claiming industrial CNC nesting. The result is intended to help a user decide whether a part list fits the selected stock and whether the cut sequence is plausible.'],
+        table: { caption: 'Sheet methodology boundaries', headers: ['Area', 'Handled by StockCut', 'Still verify manually'], rows: [['Rectangular panels', 'Width, height, quantity, labels, kerf spacing, rotation review', 'Defects, bowing, chipped edges, exact saw setup'], ['Offcuts', 'Remaining rectangular areas shown for planning', 'Actual squareness and whether the offcut is worth saving'], ['Grain or rotation', 'Rotation can be locked or reviewed', 'Visible grain, veneer direction, bookmatch requirements']] }
+      },
+      {
+        heading: 'How linear stock is packed',
+        body: ['Linear jobs use straight-stock packing logic so repeated lengths can be assigned to available stock lengths with kerf between cuts. The output highlights used length, waste, offcuts, repeated patterns, and unplaced pieces when the requested list exceeds the provided material.'],
+        bullets: ['Use measured stock length, not nominal length, when accuracy matters.', 'Set kerf to the saw blade or abrasive wheel loss used for that material.', 'Review end trimming, burr cleanup, and any allowance outside the optimizer separately.']
+      },
+      {
+        heading: 'Why limits and warnings are part of the methodology',
+        body: ['Large imported files, extreme quantities, and oversized share links are rejected before optimization so the browser remains responsive. Partial results and unplaced warnings are treated as planning signals, not failures to hide. If a job cannot fit under the current assumptions, the safest output is a visible warning rather than a silent layout.']
+      },
+      {
+        heading: 'Shop verification checklist',
+        body: ['Before cutting, compare the generated plan with physical material and the real process. Check stock dimensions, factory-edge trim, kerf, blade condition, machine support, safe handling, labels, edge banding notes, grain direction, and whether the first cut should be a rough breakdown cut instead of a final finished cut.']
+      }
+    ],
+    faq: [
+      { question: 'Is StockCut industrial nesting software?', answer: 'No. It is a practical rectangular sheet and straight-stock cut list planner, not CNC CAM or polygon nesting software.' },
+      { question: 'Why does StockCut show unplaced parts?', answer: 'Unplaced warnings make fit failures visible when parts cannot fit the provided stock under the selected kerf, quantity, and rotation constraints.' },
+      { question: 'Can the printed layout be used directly at the saw?', answer: 'Use it as a planning aid. Verify the physical stock, safe cutting order, machine setup, and final dimensions before cutting.' }
+    ],
+    related: [
+      { href: '/sheet-cutting-optimizer', label: 'Sheet cutting optimizer' },
+      { href: '/linear-cutting-optimizer', label: 'Linear cutting optimizer' },
+      { href: '/how-to-account-for-saw-kerf', label: 'How to account for saw kerf' }
+    ]
   }
 };
 

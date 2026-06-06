@@ -1,6 +1,7 @@
 import type { GrainLock, OptimizationWarning, OptimizedSheet, SheetOptimizationResult, SheetPartInput, SheetProjectInput, SheetPlacement, StockSheetInput, UnplacedPart } from '@/core/types';
 import { parseDimension } from '@/core/units/parseDimension';
 import { parseQuantity } from '@/core/validation/quantity';
+import { MAX_EXPANDED_ITEMS, MAX_PART_QUANTITY, MAX_STOCK_QUANTITY } from '@/core/validation/limits';
 
 interface PartInstance {
   partId: string;
@@ -50,13 +51,17 @@ function expandParts(parts: SheetPartInput[], unit: SheetProjectInput['unit']): 
   for (const row of parts) {
     const width = parseDimension(row.width, unit);
     const height = parseDimension(row.height, unit);
-    const quantity = parseQuantity(row.quantity);
+    const quantity = parseQuantity(row.quantity, { max: MAX_PART_QUANTITY });
     if (!width.ok || !height.ok || !quantity.ok) {
       warnings.push({ code: !quantity.ok ? 'INVALID_QUANTITY' : 'INVALID_DIMENSION', severity: 'error', partId: row.id, message: `${row.label || 'Part'} has invalid width, height, or quantity.` });
       continue;
     }
     if (width.valueUm <= 0 || height.valueUm <= 0) {
       warnings.push({ code: 'INVALID_DIMENSION', severity: 'error', partId: row.id, message: `${row.label || 'Part'} must have positive dimensions.` });
+      continue;
+    }
+    if (expanded.length + quantity.value > MAX_EXPANDED_ITEMS) {
+      warnings.push({ code: 'INVALID_QUANTITY', severity: 'error', partId: row.id, message: `${row.label || 'Part'} would expand the job beyond ${MAX_EXPANDED_ITEMS.toLocaleString()} sheet parts. Split the project into smaller batches.` });
       continue;
     }
     const grainLock = row.grainLock ?? 'none';
@@ -82,7 +87,7 @@ function expandParts(parts: SheetPartInput[], unit: SheetProjectInput['unit']): 
 function parseStockOption(stock: StockSheetInput, unit: SheetProjectInput['unit']): { option?: StockOption; warning?: OptimizationWarning } {
   const width = parseDimension(stock.width, unit);
   const height = parseDimension(stock.height, unit);
-  const quantity = parseQuantity(stock.quantity, true);
+  const quantity = parseQuantity(stock.quantity, { allowAuto: true, max: MAX_STOCK_QUANTITY });
   const trims = {
     top: parseDimension(stock.trimTop || '0', unit),
     right: parseDimension(stock.trimRight || '0', unit),
@@ -105,7 +110,7 @@ function parseStockOption(stock: StockSheetInput, unit: SheetProjectInput['unit'
       trim: { top: trims.top.valueUm, right: trims.right.valueUm, bottom: trims.bottom.valueUm, left: trims.left.valueUm },
       usableWidthUm,
       usableHeightUm,
-      quantity: Math.min(quantity.value, 999),
+      quantity: quantity.value,
       opened: 0,
       cost: parseCost(stock.cost)
     }

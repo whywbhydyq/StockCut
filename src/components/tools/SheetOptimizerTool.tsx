@@ -6,13 +6,11 @@ import { sheetPresets, type SheetPresetKey } from '@/data/presets';
 import { optimizeSheetProject } from '@/core/sheet-optimizer/guillotine';
 import { formatDimension, formatPercent } from '@/core/units/formatDimension';
 import { parseSheetPaste } from '@/core/import/parsePaste';
-import { parseSheetWorkbookFile } from '@/core/import/parseWorkbook';
-import { exportSheetResultCsv, downloadText } from '@/core/export/exportCsv';
-import { downloadSheetPdf } from '@/core/export/exportPdf';
-import { downloadSheetDxf } from '@/core/export/exportDxf';
 import { loadProject, saveProject } from '@/core/storage/projectStorage';
 import { loadSheetOffcutInventory, saveSheetOffcutInventory, sheetInventoryToStock, type SheetOffcutInventoryItem } from '@/core/storage/offcutInventory';
 import { buildShareUrl, readShareProjectFromHash } from '@/core/storage/shareProject';
+import { assertFileSize, MAX_CSV_TEXT_FILE_BYTES, MAX_JSON_FILE_BYTES } from '@/core/validation/limits';
+import { validateSheetProjectInput } from '@/core/validation/projectSchema';
 import { trackEvent } from '@/core/analytics/trackEvent';
 import { runSheetOptimizationInWorker, type WorkerProgress } from '@/core/worker/optimizerWorkerClient';
 import { SheetLayoutSvg } from '@/components/layout-viewer/SheetLayoutSvg';
@@ -54,8 +52,8 @@ export function SheetOptimizerTool({ preset = 'imperial-sheet' }: { preset?: She
   const cancelWorkerRef = useRef<null | (() => void)>(null);
 
   useEffect(() => {
-    const shared = readShareProjectFromHash<SheetProjectInput>('sheet-2d');
-    setProject(shared ?? loadProject(`${key}:${preset}`, fallback));
+    const shared = readShareProjectFromHash<SheetProjectInput>('sheet-2d', validateSheetProjectInput);
+    setProject(shared ?? loadProject(`${key}:${preset}`, fallback, validateSheetProjectInput));
     setInventory(loadSheetOffcutInventory());
   }, []);
   useEffect(() => saveProject(`${key}:${preset}`, project), [project, preset]);
@@ -114,6 +112,8 @@ export function SheetOptimizerTool({ preset = 'imperial-sheet' }: { preset?: She
   };
   const importCsvFile = (file?: File) => {
     if (!file) return;
+    try { assertFileSize(file, MAX_CSV_TEXT_FILE_BYTES, 'CSV file'); }
+    catch (error) { setPasteError(error instanceof Error ? error.message : 'CSV file is too large.'); return; }
     void file.text().then((text) => {
       const parsed = parseSheetPaste(text);
       if (!parsed.ok) {
@@ -128,23 +128,28 @@ export function SheetOptimizerTool({ preset = 'imperial-sheet' }: { preset?: She
   };
   const importWorkbookFile = (file?: File) => {
     if (!file) return;
-    void parseSheetWorkbookFile(file).then((parsed) => {
-      if (!parsed.ok) {
-        setPasteError(parsed.errors.map((error) => error.message).join('\n'));
-        setPendingParts(null);
-        return;
-      }
-      setPasteError(null);
-      setPendingParts(parsed.records);
-      trackEvent('xlsx_import_used', { mode: 'sheet' });
-    }).catch((error: unknown) => setPasteError(error instanceof Error ? error.message : 'Could not read Excel workbook.'));
+    void import('@/core/import/parseWorkbook')
+      .then(({ parseSheetWorkbookFile }) => parseSheetWorkbookFile(file))
+      .then((parsed) => {
+        if (!parsed.ok) {
+          setPasteError(parsed.errors.map((error) => error.message).join('\n'));
+          setPendingParts(null);
+          return;
+        }
+        setPasteError(null);
+        setPendingParts(parsed.records);
+        trackEvent('xlsx_import_used', { mode: 'sheet' });
+      })
+      .catch((error: unknown) => setPasteError(error instanceof Error ? error.message : 'Could not read Excel workbook.'));
   };
   const importJsonFile = (file?: File) => {
     if (!file) return;
+    try { assertFileSize(file, MAX_JSON_FILE_BYTES, 'JSON project file'); }
+    catch (error) { setPasteError(error instanceof Error ? error.message : 'JSON project file is too large.'); return; }
     void file.text().then((text) => {
-      const parsed = JSON.parse(text) as Partial<SheetProjectInput>;
-      if (!parsed.stock || !Array.isArray(parsed.parts) || !parsed.unit || typeof parsed.kerf !== 'string') throw new Error('JSON file is not a StockCut sheet project.');
-      setProject(parsed as SheetProjectInput);
+      const parsed = validateSheetProjectInput(JSON.parse(text));
+      if (!parsed.ok) throw new Error(parsed.error);
+      setProject(parsed.value);
       trackEvent('json_import_used', { mode: 'sheet' });
       setResult(null);
       setPasteError(null);
@@ -261,12 +266,12 @@ export function SheetOptimizerTool({ preset = 'imperial-sheet' }: { preset?: She
         <button className="btn-secondary" onClick={() => { trackEvent('sample_loaded', { mode: 'sheet', sample: 'plywood-4x8' }); setProject(clonePreset(sheetPresets['plywood-4x8'])); setResult(null); }}>4×8 plywood sample</button>
         <button className="btn-secondary" onClick={() => { trackEvent('sample_loaded', { mode: 'sheet', sample: 'metric-sheet' }); setProject(clonePreset(sheetPresets['metric-sheet'])); setResult(null); }}>2440×1220 mm sample</button>
         {result && <>
-          <button className="btn-secondary" onClick={() => { trackEvent('csv_export_clicked', { mode: 'sheet' }); downloadText('stockcut-sheet-result.csv', exportSheetResultCsv(result, project.unit), 'text/csv'); }}>CSV export</button>
-          <button className="btn-secondary" onClick={() => { trackEvent('json_export_clicked', { mode: 'sheet' }); downloadText('stockcut-project.json', JSON.stringify(project, null, 2), 'application/json'); }}>JSON export</button>
+          <button className="btn-secondary" onClick={async () => { trackEvent('csv_export_clicked', { mode: 'sheet' }); const { downloadText, exportSheetResultCsv } = await import('@/core/export/exportCsv'); downloadText('stockcut-sheet-result.csv', exportSheetResultCsv(result, project.unit), 'text/csv'); }}>CSV export</button>
+          <button className="btn-secondary" onClick={async () => { trackEvent('json_export_clicked', { mode: 'sheet' }); const { downloadText } = await import('@/core/export/exportCsv'); downloadText('stockcut-project.json', JSON.stringify(project, null, 2), 'application/json'); }}>JSON export</button>
           <button className="btn-secondary" onClick={() => navigator.clipboard.writeText(`StockCut: ${result.sheetsUsed.length} sheets, yield ${formatPercent(result.yieldRate)}, waste ${formatPercent(result.wasteRate)}, estimated stock cost ${result.estimatedStockCost ? `$${result.estimatedStockCost.toFixed(2)}` : 'not set'}`)}>Copy summary</button>
-          <button className="btn-secondary" onClick={() => { navigator.clipboard.writeText(buildShareUrl('sheet-2d', project)); trackEvent('share_link_created', { mode: 'sheet' }); }}>Copy share link</button>
+          <button className="btn-secondary" onClick={() => { try { navigator.clipboard.writeText(buildShareUrl('sheet-2d', project)); trackEvent('share_link_created', { mode: 'sheet' }); } catch (error) { setPasteError(error instanceof Error ? error.message : 'Project is too large for a share link. Download JSON instead.'); } }}>Copy share link</button>
           <button className="btn-secondary" onClick={addResultOffcutsToStock}>Use largest offcuts as stock</button><button className="btn-secondary" onClick={saveResultOffcutsToLibrary}>Save offcuts to library</button>
-          <button className="btn-secondary" onClick={() => { trackEvent('pdf_export_clicked', { mode: 'sheet' }); void downloadSheetPdf(project, result); }}>Download PDF file</button><button className="btn-secondary" onClick={() => { trackEvent('dxf_export_clicked', { mode: 'sheet' }); downloadSheetDxf(result); }}>Download planning DXF</button><button className="btn-secondary" onClick={() => { trackEvent('print_clicked', { mode: 'sheet' }); window.print(); }}>Browser Print / Save PDF</button>
+          <button className="btn-secondary" onClick={async () => { trackEvent('pdf_export_clicked', { mode: 'sheet' }); const { downloadSheetPdf } = await import('@/core/export/exportPdf'); await downloadSheetPdf(project, result); }}>Download PDF file</button><button className="btn-secondary" onClick={async () => { trackEvent('dxf_export_clicked', { mode: 'sheet' }); const { downloadSheetDxf } = await import('@/core/export/exportDxf'); downloadSheetDxf(result); }}>Download planning DXF</button><button className="btn-secondary" onClick={() => { trackEvent('print_clicked', { mode: 'sheet' }); window.print(); }}>Browser Print / Save PDF</button>
         </>}
       </div>
 

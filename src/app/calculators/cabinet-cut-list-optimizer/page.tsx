@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
 export default function Page() {
-  redirect('/cabinet-cut-list-optimizer');
+  permanentRedirect('/cabinet-cut-list-optimizer');
 }

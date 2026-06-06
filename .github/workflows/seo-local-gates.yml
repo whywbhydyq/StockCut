@@ -1,0 +1,49 @@
+name: SEO local gates
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seo-local-gates:
+    name: Evidence-gated SEO source checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: npm
+
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Run SEO local gates
+        run: npm run seo:local-gates
+
+      - name: Archive derived SEO gate reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-local-gates-reports
+          path: |
+            .seo-cache/seo-local-gates-report.json
+            .seo-cache/seo-signal-files-verification.json
+            .seo-cache/production-signals-summary.json
+            .seo-cache/seo-change-control-report.json
+            .seo-cache/npm-audit-prod.json
+            .seo-cache/npm-audit-full.json
+            .seo-cache/seo-offline-skills-report.json
+            .seo-cache/seo-source-baseline.json
+            .seo-cache/seo-source-drift-report.json
+          if-no-files-found: ignore

@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
 export default function Page() {
-  redirect('/drawer-box-cut-list-calculator');
+  permanentRedirect('/drawer-box-cut-list-calculator');
 }

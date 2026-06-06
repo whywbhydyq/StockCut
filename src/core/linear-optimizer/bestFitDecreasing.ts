@@ -1,6 +1,7 @@
 import type { LinearOptimizationResult, LinearPartInput, LinearProjectInput, LinearStockInput, OptimizationWarning, OptimizedLinearStock, UnplacedLinearCut } from '@/core/types';
 import { parseDimension } from '@/core/units/parseDimension';
 import { parseQuantity } from '@/core/validation/quantity';
+import { MAX_EXPANDED_ITEMS, MAX_PART_QUANTITY, MAX_STOCK_QUANTITY } from '@/core/validation/limits';
 
 interface CutInstance { partId: string; label: string; lengthUm: number; instanceIndex: number; material?: string; miterAngle?: string; notes?: string }
 interface StockOption { input: LinearStockInput; lengthUm: number; usableLengthUm: number; quantity: number; opened: number; material?: string; cost: number; isOffcut?: boolean }
@@ -22,13 +23,17 @@ function expandCuts(parts: LinearPartInput[], unit: LinearProjectInput['unit']):
   const warnings: OptimizationWarning[] = [];
   for (const row of parts) {
     const length = parseDimension(row.length, unit);
-    const quantity = parseQuantity(row.quantity);
+    const quantity = parseQuantity(row.quantity, { max: MAX_PART_QUANTITY });
     if (!length.ok || !quantity.ok) {
       warnings.push({ code: !quantity.ok ? 'INVALID_QUANTITY' : 'INVALID_DIMENSION', severity: 'error', partId: row.id, message: `${row.label || 'Cut'} has invalid length or quantity.` });
       continue;
     }
     if (length.valueUm <= 0) {
       warnings.push({ code: 'INVALID_DIMENSION', severity: 'error', partId: row.id, message: `${row.label || 'Cut'} must have a positive length.` });
+      continue;
+    }
+    if (cuts.length + quantity.value > MAX_EXPANDED_ITEMS) {
+      warnings.push({ code: 'INVALID_QUANTITY', severity: 'error', partId: row.id, message: `${row.label || 'Cut'} would expand the job beyond ${MAX_EXPANDED_ITEMS.toLocaleString()} cuts. Split the project into smaller batches.` });
       continue;
     }
     for (let i = 1; i <= quantity.value; i += 1) cuts.push({ partId: row.id, label: row.label || `Cut ${row.id}`, lengthUm: length.valueUm, instanceIndex: i, material: row.material, miterAngle: row.miterAngle, notes: row.notes });
@@ -41,13 +46,13 @@ function parseStockOption(stock: LinearStockInput, unit: LinearProjectInput['uni
   const length = parseDimension(stock.length, unit);
   const trimStart = parseDimension(stock.trimStart || '0', unit);
   const trimEnd = parseDimension(stock.trimEnd || '0', unit);
-  const quantity = parseQuantity(stock.quantity, true);
+  const quantity = parseQuantity(stock.quantity, { allowAuto: true, max: MAX_STOCK_QUANTITY });
   if (!length.ok || !trimStart.ok || !trimEnd.ok || !quantity.ok) {
     return { warning: { code: 'INVALID_DIMENSION', severity: 'error', stockId: stock.id, message: `${stock.label || 'Stock'} has invalid length, trim, quantity, or cost.` } };
   }
   const usableLengthUm = length.valueUm - trimStart.valueUm - trimEnd.valueUm;
   if (usableLengthUm <= 0) return { warning: { code: 'TRIM_REDUCES_USABLE_AREA', severity: 'error', stockId: stock.id, message: `${stock.label || 'Stock'} trim leaves no usable stock length.` } };
-  return { option: { input: stock, lengthUm: length.valueUm, usableLengthUm, quantity: Math.min(quantity.value, 999), opened: 0, material: stock.material, cost: parseCost(stock.cost), isOffcut: stock.isOffcut } };
+  return { option: { input: stock, lengthUm: length.valueUm, usableLengthUm, quantity: quantity.value, opened: 0, material: stock.material, cost: parseCost(stock.cost), isOffcut: stock.isOffcut } };
 }
 
 function packLinearProject(input: LinearProjectInput, order: string, started: number): LinearOptimizationResult {

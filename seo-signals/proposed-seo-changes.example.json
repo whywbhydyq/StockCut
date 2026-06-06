@@ -1,0 +1,18 @@
+{
+  "changes": [
+    {
+      "action": "rewrite-title-description",
+      "url": "https://stockcut.ymirtool.com/sheet-cutting-optimizer",
+      "decisionGate": "metadata-rewrite-gate",
+      "candidateLabel": "copy the exact label from .seo-cache/production-signals-summary.json optimizationActionCandidates",
+      "sourceEvidence": [
+        ".seo-cache/seo-signal-files-verification.json",
+        ".seo-cache/production-signals-summary.json"
+      ],
+      "filesChanged": [
+        "src/data/pages.ts"
+      ],
+      "reviewerNote": "Explain the production signal evidence. Do not use this example as approval."
+    }
+  ]
+}

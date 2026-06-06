@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
 export default function Page() {
-  redirect('/cut-list-optimizer-vs-excel');
+  permanentRedirect('/cut-list-optimizer-vs-excel');
 }

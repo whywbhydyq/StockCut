@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
 export default function Page() {
-  redirect('/melamine-cut-list-optimizer');
+  permanentRedirect('/melamine-cut-list-optimizer');
 }

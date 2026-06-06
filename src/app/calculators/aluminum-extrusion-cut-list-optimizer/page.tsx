@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
 export default function Page() {
-  redirect('/aluminum-extrusion-cut-list-optimizer');
+  permanentRedirect('/aluminum-extrusion-cut-list-optimizer');
 }

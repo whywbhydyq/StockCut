@@ -8,3 +8,10 @@ dist/
 .env*
 coverage/
 tsconfig.tsbuildinfo
+
+.seo-cache/
+
+# Raw SEO production exports stay local. Keep only documentation/templates.
+seo-signals/*
+!seo-signals/README.md
+!seo-signals/proposed-seo-changes.example.json

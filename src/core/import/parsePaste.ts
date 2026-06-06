@@ -1,4 +1,5 @@
 import type { GrainLock, LinearPartInput, SheetPartInput } from '@/core/types';
+import { assertTextSize, MAX_CELL_CHARS, MAX_LABEL_CHARS, MAX_PASTE_COLUMNS, MAX_PASTE_ROWS, MAX_PASTE_TEXT_CHARS } from '@/core/validation/limits';
 
 export interface PasteIssue { row: number; message: string }
 export interface SheetPasteResult { ok: boolean; records: SheetPartInput[]; errors: PasteIssue[] }
@@ -63,7 +64,18 @@ function detectDelimiter(text: string): string {
   return scores.sort((a, b) => b.score - a.score)[0]?.delimiter ?? '\t';
 }
 
+
+function limitCell(value: string): string {
+  const trimmed = value.trim();
+  return trimmed.length > MAX_CELL_CHARS ? trimmed.slice(0, MAX_CELL_CHARS) : trimmed;
+}
+
+function makeLimitError(message: string): PasteIssue {
+  return { row: 1, message };
+}
+
 function parseDelimitedRows(text: string): ParsedRow[] {
+  assertTextSize(text, MAX_PASTE_TEXT_CHARS, 'Pasted table');
   const delimiter = detectDelimiter(text);
   const rows: ParsedRow[] = [];
   let cells: string[] = [];
@@ -73,12 +85,16 @@ function parseDelimitedRows(text: string): ParsedRow[] {
   let currentRowNumber = 1;
 
   const pushCell = () => {
-    cells.push(cell.trim());
+    if (cells.length >= MAX_PASTE_COLUMNS) throw new Error(`Pasted table has too many columns. Maximum is ${MAX_PASTE_COLUMNS}.`);
+    cells.push(limitCell(cell));
     cell = '';
   };
   const pushRow = () => {
     pushCell();
-    if (cells.some((value) => value.trim())) rows.push({ cells, rowNumber: currentRowNumber });
+    if (cells.some((value) => value.trim())) {
+      if (rows.length >= MAX_PASTE_ROWS) throw new Error(`Pasted table has too many rows. Maximum is ${MAX_PASTE_ROWS.toLocaleString()}.`);
+      rows.push({ cells, rowNumber: currentRowNumber });
+    }
     cells = [];
     currentRowNumber = rowNumber + 1;
   };
@@ -157,12 +173,17 @@ function allowRotationCell(value?: string): boolean {
 export function parseSheetPaste(text: string): SheetPasteResult {
   const records: SheetPartInput[] = [];
   const errors: PasteIssue[] = [];
-  const rows = parseDelimitedRows(String(text));
+  let rows: ParsedRow[];
+  try {
+    rows = parseDelimitedRows(String(text));
+  } catch (error) {
+    return { ok: false, records, errors: [makeLimitError(error instanceof Error ? error.message : 'Pasted table could not be parsed.')] };
+  }
   const header = rows[0] && hasSheetHeader(rows[0].cells) ? buildHeaderMap(rows[0].cells, SHEET_HEADERS) : null;
   const dataRows = header ? rows.slice(1) : rows;
 
   dataRows.forEach(({ cells, rowNumber }) => {
-    const label = cell(cells, header, 'label', 0);
+    const label = cell(cells, header, 'label', 0).slice(0, MAX_LABEL_CHARS);
     const width = cell(cells, header, 'width', 1);
     const height = cell(cells, header, 'height', 2);
     const quantity = cell(cells, header, 'quantity', 3);
@@ -194,12 +215,17 @@ export function parseSheetPaste(text: string): SheetPasteResult {
 export function parseLinearPaste(text: string): LinearPasteResult {
   const records: LinearPartInput[] = [];
   const errors: PasteIssue[] = [];
-  const rows = parseDelimitedRows(String(text));
+  let rows: ParsedRow[];
+  try {
+    rows = parseDelimitedRows(String(text));
+  } catch (error) {
+    return { ok: false, records, errors: [makeLimitError(error instanceof Error ? error.message : 'Pasted table could not be parsed.')] };
+  }
   const header = rows[0] && hasLinearHeader(rows[0].cells) ? buildHeaderMap(rows[0].cells, LINEAR_HEADERS) : null;
   const dataRows = header ? rows.slice(1) : rows;
 
   dataRows.forEach(({ cells, rowNumber }) => {
-    const label = cell(cells, header, 'label', 0);
+    const label = cell(cells, header, 'label', 0).slice(0, MAX_LABEL_CHARS);
     const length = cell(cells, header, 'length', 1);
     const quantity = cell(cells, header, 'quantity', 2);
     if (!label || !length || !quantity) {
@@ -213,7 +239,7 @@ export function parseLinearPaste(text: string): LinearPasteResult {
       quantity,
       material: cell(cells, header, 'material', 3) || undefined,
       miterAngle: cell(cells, header, 'miterAngle', 4) || undefined,
-      notes: cell(cells, header, 'notes', 5) || undefined
+      notes: cell(cells, header, 'notes', 5).slice(0, MAX_CELL_CHARS) || undefined
     });
   });
   return { ok: errors.length === 0 && records.length > 0, records, errors: records.length === 0 && errors.length === 0 ? [{ row: 1, message: 'No linear cut rows were found.' }] : errors };

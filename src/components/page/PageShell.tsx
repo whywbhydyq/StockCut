@@ -6,50 +6,98 @@ import { LinearOptimizerTool } from '@/components/tools/LinearOptimizerTool';
 import { KerfCalculator } from '@/components/tools/KerfCalculator';
 import { PlywoodYieldCalculator } from '@/components/tools/PlywoodYieldCalculator';
 import { siteUrl, type SeoPage } from '@/data/pages';
+import { organizationJsonLd, siteLastModified, siteOgImage, websiteJsonLd } from '@/data/siteMeta';
 import { guideContentBySlug } from '@/data/guideContent';
 import { presetContentBySlug, type StockCutPresetContent } from '@/data/presetContent';
 import type { LinearPresetKey, SheetPresetKey } from '@/data/presets';
 import { PageSupportSections } from '@/components/page/PageSupportSections';
+import { IntentNavigation } from '@/components/page/IntentNavigation';
+import { PageEvidencePanel } from '@/components/page/PageEvidencePanel';
+import { intentClusterJsonLd, relatedPagesFor } from '@/data/seoIntentClusters';
+import { evidenceJsonLd, pageAboutTerms, pageMentions } from '@/data/pageEvidence';
 
 const sheetPresetKeys = new Set<SheetPresetKey>(['imperial-sheet', 'metric-sheet', 'plywood-4x8', 'mdf-metric', 'acrylic-metric', 'melamine-cabinet', 'cabinet', 'bookshelf', 'drawer-box', 'closet-shelf', 'workbench']);
 const linearPresetKeys = new Set<LinearPresetKey>(['imperial-linear', 'metric-linear', 'linear-bar', 'steel-tube', 'aluminum-extrusion', 'pvc-pipe', 'lumber-length', 'rebar']);
 
+function pageKeywords(page: SeoPage) {
+  return [page.primaryQuery, page.title, 'cut list optimizer', 'kerf', page.kind === 'linear' ? 'linear stock cutting' : 'sheet cutting layout'].filter(Boolean).join(', ');
+}
+
 function jsonLd(page: SeoPage) {
   const url = `${siteUrl}${page.slug === '/' ? '' : page.slug}`;
+  const relatedPages = relatedPagesFor(page, 6);
+  const aboutTerms = pageAboutTerms(page);
+  const mentions = pageMentions(page);
   const breadcrumb = {
-    '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'StockCut', item: siteUrl },
       { '@type': 'ListItem', position: 2, name: page.title, item: url }
     ]
   };
+  const webPage = {
+    '@type': 'WebPage',
+    '@id': `${url}#webpage`,
+    url,
+    name: page.title,
+    description: page.description,
+    inLanguage: 'en',
+    isPartOf: { '@id': `${siteUrl}/#website` },
+    breadcrumb,
+    dateModified: siteLastModified,
+    image: siteOgImage,
+    about: aboutTerms.map((name) => ({ '@type': 'Thing', name })),
+    mentions: mentions.map((name) => ({ '@type': 'Thing', name })),
+    relatedLink: relatedPages.map((related) => `${siteUrl}${related.slug === '/' ? '' : related.slug}`)
+  };
 
   if (page.kind === 'guide') {
     const article = {
-      '@context': 'https://schema.org',
       '@type': 'Article',
       headline: page.title,
       description: page.description,
-      mainEntityOfPage: url,
-      author: { '@type': 'Organization', name: 'StockCut' },
-      publisher: { '@type': 'Organization', name: 'StockCut' },
-      dateModified: '2026-05-30'
+      mainEntityOfPage: { '@id': `${url}#webpage` },
+      author: { '@type': 'Organization', name: 'StockCut', url: siteUrl },
+      publisher: { '@id': `${siteUrl}/#organization` },
+      isPartOf: { '@id': `${siteUrl}/#website` },
+      inLanguage: 'en',
+      datePublished: '2026-05-30',
+      dateModified: siteLastModified,
+      image: siteOgImage,
+      keywords: pageKeywords(page),
+      about: [
+        ...aboutTerms.map((name) => ({ '@type': 'Thing', name }))
+      ],
+      mentions: mentions.map((name) => ({ '@type': 'Thing', name }))
     };
-    return JSON.stringify([article, breadcrumb]);
+    return JSON.stringify({ '@context': 'https://schema.org', '@graph': [organizationJsonLd(), websiteJsonLd(), intentClusterJsonLd(), webPage, article, evidenceJsonLd(page), breadcrumb] });
   }
 
   const app = {
-    '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: page.title,
     url,
     applicationCategory: 'UtilityApplication',
     operatingSystem: 'Web',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-    description: page.description
+    description: page.description,
+    inLanguage: 'en',
+    isPartOf: { '@id': `${siteUrl}/#website` },
+    publisher: { '@id': `${siteUrl}/#organization` },
+    mainEntityOfPage: { '@id': `${url}#webpage` },
+    isAccessibleForFree: true,
+    softwareVersion: '1.0.0',
+    browserRequirements: 'Requires a modern browser with JavaScript enabled; calculations run locally in the browser.',
+    dateModified: siteLastModified,
+    image: siteOgImage,
+    keywords: pageKeywords(page),
+    about: aboutTerms.map((name) => ({ '@type': 'Thing', name })),
+    mentions: mentions.map((name) => ({ '@type': 'Thing', name })),
+    featureList: page.kind === 'linear'
+      ? ['Linear stock cut optimization', 'Kerf-aware cut sequence', 'Reusable offcut tracking', 'CSV, JSON, and PDF output']
+      : ['Rectangular sheet layout optimization', 'Kerf-aware panel placement', 'Rotation and grain review', 'Printable diagrams and CSV, JSON, PDF, DXF output']
   };
-  return JSON.stringify([app, breadcrumb]);
+  return JSON.stringify({ '@context': 'https://schema.org', '@graph': [organizationJsonLd(), websiteJsonLd(), intentClusterJsonLd(), webPage, app, evidenceJsonLd(page), breadcrumb] });
 }
 
 export function PageShell({ page }: { page: SeoPage }) {
@@ -71,6 +119,8 @@ export function PageShell({ page }: { page: SeoPage }) {
     {presetContent && <PresetContent content={presetContent} />}
     {page.kind === 'guide' && <GuideContent page={page} />}
     {(page.kind === 'legal' || page.kind === 'about') && <LegalContent page={page} />}
+    <PageEvidencePanel page={page} />
+    <IntentNavigation page={page} />
     <AdSlot />
     <AffiliateSlot />
     <PageSupportSections />
@@ -170,5 +220,8 @@ function LegalContent({ page }: { page: SeoPage }) {
   const privacy = page.slug.includes('privacy');
   const contact = page.slug.includes('contact');
   const about = page.slug.includes('about');
-  return <section className="tool-card"><h2 className="text-2xl font-black">{page.title}</h2><p className="mt-3 text-stock-muted">StockCut is a YmirTool planning tool for sheet goods, boards, pipe, tube, bar stock, kerf-aware cut lists, printable layouts, and shop preparation. All calculations are estimates and should be verified before cutting material. {privacy ? 'Cut lists, dimensions, and project drafts are processed locally in your browser and are not uploaded or cloud-saved by this app. Analytics, advertising cookies, or affiliate links may be used only for standard site operation and monetization.' : 'You are responsible for safe tool operation, measurement verification, material decisions, and compliance with your shop process.'}</p>{contact && <p className="mt-3 text-stock-muted">For corrections, bug reports, source updates, or feedback about a preset page, email <a className="font-bold underline" href="mailto:ymirtool@ymirtool.com">ymirtool@ymirtool.com</a>. Include the page URL, stock dimensions, kerf, part list, expected result, and actual result when reporting a layout issue. Do not send private customer files or unnecessary personal information.</p>}{about && <p className="mt-3 text-stock-muted">The project focuses on practical browser-side planning rather than cloud storage or certified manufacturing output. Users can enter parts, compare stock sizes, review waste, copy a cut sequence, and print the result before moving to their own shop process.</p>}</section>;
+  if (about) {
+    return <section className="tool-card space-y-5"><h2 className="text-2xl font-black">{page.title}</h2><p className="text-stock-muted">StockCut is a YmirTool planning tool for sheet goods, boards, pipe, tube, bar stock, kerf-aware cut lists, printable layouts, and shop preparation. The project focuses on practical browser-side planning rather than account-based cloud storage or certified manufacturing output.</p><section><h3 className="font-black text-stock-ink">What the tool is built to verify</h3><p className="mt-2 text-stock-muted">The calculators help users compare stock sizes, include saw kerf, mark repeated parts, review waste, identify unplaced pieces, and print a shop-readable layout before cutting. Sheet pages focus on rectangular panel layouts. Linear pages focus on straight boards, pipe, tube, extrusion, bar stock, and rebar.</p></section><section><h3 className="font-black text-stock-ink">Calculation boundaries</h3><p className="mt-2 text-stock-muted">StockCut is not CNC CAM, polygon nesting, G-code generation, certified estimating, structural engineering, or a substitute for shop safety checks. Users should verify stock dimensions, blade kerf, factory-edge trim, defects, grain direction, edge banding marks, and machine setup against physical material before cutting.</p></section><section><h3 className="font-black text-stock-ink">Privacy and data handling</h3><p className="mt-2 text-stock-muted">Cut lists are processed locally in the browser. Autosave uses localStorage, and share links encode project data in the URL hash. This means project dimensions are not intentionally uploaded to a StockCut server by the optimizer workflow.</p></section><section><h3 className="font-black text-stock-ink">Feedback and corrections</h3><p className="mt-2 text-stock-muted">For corrections, bug reports, source updates, or feedback about a preset page, email <a className="font-bold underline" href="mailto:ymirtool@ymirtool.com">ymirtool@ymirtool.com</a>. Include the page URL, stock dimensions, kerf, part list, expected result, and actual result when reporting a layout issue. Do not send private customer files or unnecessary personal information.</p></section></section>;
+  }
+  return <section className="tool-card"><h2 className="text-2xl font-black">{page.title}</h2><p className="mt-3 text-stock-muted">StockCut is a YmirTool planning tool for sheet goods, boards, pipe, tube, bar stock, kerf-aware cut lists, printable layouts, and shop preparation. All calculations are estimates and should be verified before cutting material. {privacy ? 'Cut lists, dimensions, and project drafts are processed locally in your browser and are not uploaded or cloud-saved by this app. Analytics, advertising cookies, or affiliate links may be used only for standard site operation and monetization.' : 'You are responsible for safe tool operation, measurement verification, material decisions, and compliance with your shop process.'}</p>{contact && <p className="mt-3 text-stock-muted">For corrections, bug reports, source updates, or feedback about a preset page, email <a className="font-bold underline" href="mailto:ymirtool@ymirtool.com">ymirtool@ymirtool.com</a>. Include the page URL, stock dimensions, kerf, part list, expected result, and actual result when reporting a layout issue. Do not send private customer files or unnecessary personal information.</p>}</section>;
 }

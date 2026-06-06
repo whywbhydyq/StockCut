@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
 export default function Page() {
-  redirect('/how-to-read-a-plywood-cutting-diagram');
+  permanentRedirect('/how-to-read-a-plywood-cutting-diagram');
 }

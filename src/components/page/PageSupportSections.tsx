@@ -8,7 +8,7 @@ export function PageSupportSections() {
         </div>
         <div className="tool-card">
           <h2 className="font-black">What it does not do</h2>
-          <p className="text-sm text-stock-muted">No accounts, cloud save, CNC toolpaths, G-code, true angle-cut geometry, circular parts, triangle parts, polygon nesting, enterprise inventory, or AI cabinet design. The DXF export is a rectangular planning outline, not machine-ready CAM.</p>
+          <p className="text-sm text-stock-muted">No accounts, cloud save, CNC toolpaths, G-code, true angle-cut geometry, circular parts, triangle parts, polygon nesting, enterprise inventory, or AI cabinet design. The DXF export is a rectangular planning outline, not machine-ready CAM. <a className="font-bold underline" href="/cut-list-optimization-methodology">Read the methodology</a>.</p>
         </div>
         <div className="tool-card">
           <h2 className="font-black">Privacy model</h2>

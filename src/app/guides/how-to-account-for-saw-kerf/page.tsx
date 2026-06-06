@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
 export default function Page() {
-  redirect('/how-to-account-for-saw-kerf');
+  permanentRedirect('/how-to-account-for-saw-kerf');
 }

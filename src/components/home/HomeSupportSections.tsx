@@ -1,15 +1,13 @@
+import { seoIntentClusters, pagesForSlugs } from '@/data/seoIntentClusters';
+
 export function PopularCutListLinks() {
   return (
     <section className="sc4-seo-links" aria-label="Popular cut list calculators">
       <h2>Popular cut list calculators</h2>
       <div>
-        <a href="/4x8-plywood-cut-list-optimizer">4x8 plywood cut list optimizer</a>
-        <a href="/sheet-cutting-optimizer">Sheet cutting optimizer</a>
-        <a href="/linear-cutting-optimizer">Linear cutting optimizer</a>
-        <a href="/pvc-pipe-cutting-optimizer">PVC pipe cutting optimizer</a>
-        <a href="/lumber-length-cutting-optimizer">Lumber length cutting optimizer</a>
-        <a href="/steel-tube-cutting-optimizer">Steel tube cutting optimizer</a>
-        <a href="/saw-kerf-calculator">Saw kerf calculator</a>
+        {seoIntentClusters.flatMap((cluster) => pagesForSlugs(cluster.primarySlugs)).slice(0, 12).map((page) => (
+          <a key={page.slug} href={page.slug}>{page.primaryQuery ?? page.title}</a>
+        ))}
       </div>
     </section>
   );
@@ -27,6 +25,10 @@ export function HomeFaqSection() {
         <details>
           <summary>Can I use StockCut for pipe, tube, bar, or lumber?</summary>
           <p>Yes. Boards / lumber and Pipe / tube / bar modes keep separate drafts and generate straight-stock cutting sequences with kerf, waste, and unplaced-cut warnings.</p>
+        </details>
+        <details>
+          <summary>Which page should I open first?</summary>
+          <p>Use a sheet page when parts have width and height. Use a linear page when every cut is a single length. Use a kerf page when the math appears to fit but saw width changes the finished result.</p>
         </details>
         <details>
           <summary>Does StockCut upload my cut list?</summary>

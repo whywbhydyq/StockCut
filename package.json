@@ -11,10 +11,21 @@
     "lint": "npm run typecheck && node scripts/validate-site.mjs",
     "test": "vitest run && node scripts/validate-site.mjs",
     "e2e": "playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seo:verify-signals": "node scripts/verify-seo-signal-files.mjs --input seo-signals --out .seo-cache/seo-signal-files-verification.json",
+    "seo:analyze-signals": "node scripts/analyze-production-signals.mjs --input seo-signals --out .seo-cache/production-signals-summary.json",
+    "seo:change-control": "node scripts/check-seo-change-control.mjs --summary .seo-cache/production-signals-summary.json --verification .seo-cache/seo-signal-files-verification.json --changes .seo-cache/proposed-seo-changes.json --out .seo-cache/seo-change-control-report.json",
+    "seo:local-gates": "node scripts/run-seo-local-gates.mjs",
+    "seo:change-template": "node scripts/create-seo-change-template.mjs --out .seo-cache/proposed-seo-changes.json",
+    "seo:archive-run": "node scripts/archive-seo-signal-run.mjs",
+    "seo:automation-check": "node scripts/check-seo-automation-consistency.mjs",
+    "seo:ci": "npm run seo:local-gates",
+    "seo:offline-skills": "node scripts/run-seo-offline-skills.mjs",
+    "seo:drift-baseline": "node scripts/capture-seo-source-baseline.mjs --out .seo-cache/seo-source-baseline.json",
+    "seo:drift-compare": "node scripts/compare-seo-source-baseline.mjs --baseline .seo-cache/seo-source-baseline.json --out .seo-cache/seo-source-drift-report.json"
   },
   "dependencies": {
-    "next": "15.5.9",
+    "next": "15.5.19",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
@@ -24,12 +35,15 @@
     "@types/react": "19.1.8",
     "@types/react-dom": "19.1.6",
     "autoprefixer": "10.4.20",
-    "postcss": "8.4.49",
+    "postcss": "8.5.10",
     "tailwindcss": "3.4.17",
     "typescript": "5.7.3",
-    "vitest": "2.1.8"
+    "vitest": "4.1.8"
   },
   "engines": {
     "node": "20.x"
+  },
+  "overrides": {
+    "postcss": "8.5.10"
   }
 }

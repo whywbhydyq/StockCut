@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
 export default function Page() {
-  redirect('/pvc-pipe-cutting-optimizer');
+  permanentRedirect('/pvc-pipe-cutting-optimizer');
 }

@@ -9,6 +9,8 @@ import { formatDimension, formatPercent } from '@/core/units/formatDimension';
 import { parseSheetPaste, parseLinearPaste } from '@/core/import/parsePaste';
 import { loadProject, saveProject } from '@/core/storage/projectStorage';
 import { buildShareUrl } from '@/core/storage/shareProject';
+import { assertFileSize, MAX_CSV_TEXT_FILE_BYTES, MAX_JSON_FILE_BYTES } from '@/core/validation/limits';
+import { validateLinearProjectInput, validateSheetProjectInput } from '@/core/validation/projectSchema';
 import { trackEvent } from '@/core/analytics/trackEvent';
 import { HomeFaqSection, PopularCutListLinks } from '@/components/home/HomeSupportSections';
 
@@ -209,7 +211,7 @@ function downloadClientText(filename: string, content: string, type: string): vo
   link.href = url;
   link.download = filename;
   link.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 export function StockCutHomeWorkspace() {
@@ -232,9 +234,9 @@ export function StockCutHomeWorkspace() {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    setSheetProject(loadProject(SHEET_STORAGE_KEY, createHomeSheetProject()));
-    setLumberProject(loadProject(LUMBER_STORAGE_KEY, loadProject(LINEAR_STORAGE_KEY, createHomeLinearProject('lumber'))));
-    setTubeProject(loadProject(TUBE_STORAGE_KEY, createHomeLinearProject('tube')));
+    setSheetProject(loadProject(SHEET_STORAGE_KEY, createHomeSheetProject(), validateSheetProjectInput));
+    setLumberProject(loadProject(LUMBER_STORAGE_KEY, loadProject(LINEAR_STORAGE_KEY, createHomeLinearProject('lumber'), validateLinearProjectInput), validateLinearProjectInput));
+    setTubeProject(loadProject(TUBE_STORAGE_KEY, createHomeLinearProject('tube'), validateLinearProjectInput));
   }, []);
 
   useEffect(() => {
@@ -472,16 +474,31 @@ export function StockCutHomeWorkspace() {
     const isWorkbook = /\.(xlsx|xls)$/i.test(file.name);
     const isJson = /\.json$/i.test(file.name) || file.type === 'application/json';
     if (isJson) {
+      try {
+        assertFileSize(file, MAX_JSON_FILE_BYTES, 'JSON project file');
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'JSON project file is too large.');
+        return;
+      }
       void file.text().then((text) => {
-        const parsed = JSON.parse(text) as SheetProjectInput | LinearProjectInput;
-        if ('stock' in parsed && 'parts' in parsed && 'height' in (parsed as SheetProjectInput).stock) {
+        const parsed = JSON.parse(text) as unknown;
+        const sheet = validateSheetProjectInput(parsed);
+        if (sheet.ok) {
           setMode('sheet');
-          setSheetProject(parsed as SheetProjectInput);
-        } else {
-          setMode('lumber');
-          setLinearProject(parsed as LinearProjectInput);
+          setSheetProject(sheet.value);
+          setResult(null);
+          setPendingImport(null);
+          return;
         }
-        setResult(null);
+        const linear = validateLinearProjectInput(parsed);
+        if (linear.ok) {
+          setMode('lumber');
+          setLumberProject(linear.value);
+          setResult(null);
+          setPendingImport(null);
+          return;
+        }
+        throw new Error(`${sheet.error} ${linear.error}`);
       }).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not import JSON project.'));
       return;
     }
@@ -491,7 +508,11 @@ export function StockCutHomeWorkspace() {
         .then(({ parseLinearWorkbookFile }) => parseLinearWorkbookFile(file))
         .then((parsed) => parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n')))
         .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read Excel workbook.'));
-      else void file.text().then((text) => { const parsed = parseLinearPaste(text); parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n')); }).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read CSV file.'));
+      else {
+        try { assertFileSize(file, MAX_CSV_TEXT_FILE_BYTES, 'CSV file'); }
+        catch (caught) { setError(caught instanceof Error ? caught.message : 'CSV file is too large.'); return; }
+        void file.text().then((text) => { const parsed = parseLinearPaste(text); parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n')); }).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read CSV file.'));
+      }
       return;
     }
     const apply = (rows: SheetPartInput[]) => { setResult(null); setError(null); setPendingImport({ kind: 'sheet', rows }); setPasteOpen(true); };
@@ -499,7 +520,11 @@ export function StockCutHomeWorkspace() {
       .then(({ parseSheetWorkbookFile }) => parseSheetWorkbookFile(file))
       .then((parsed) => parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n')))
       .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read Excel workbook.'));
-    else void file.text().then((text) => { const parsed = parseSheetPaste(text); parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n')); }).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read CSV file.'));
+    else {
+      try { assertFileSize(file, MAX_CSV_TEXT_FILE_BYTES, 'CSV file'); }
+      catch (caught) { setError(caught instanceof Error ? caught.message : 'CSV file is too large.'); return; }
+      void file.text().then((text) => { const parsed = parseSheetPaste(text); parsed.ok ? apply(parsed.records) : setError(parsed.errors.map((item) => item.message).join('\n')); }).catch((caught: unknown) => setError(caught instanceof Error ? caught.message : 'Could not read CSV file.'));
+    }
   };
 
   const markCopied = (key: string) => {
@@ -516,9 +541,13 @@ export function StockCutHomeWorkspace() {
   };
 
   const copyShareLink = () => {
-    const link = isLinearMode(mode) ? buildShareUrl('linear-1d', linearProject) : buildShareUrl('sheet-2d', sheetProject);
-    void navigator.clipboard.writeText(link).then(() => markCopied('share')).catch(() => setError('Copy failed. Download the project JSON instead, or copy the browser address manually.'));
-    trackEvent('share_link_created', { mode: isLinearMode(mode) ? 'linear' : 'sheet', source: 'home' });
+    try {
+      const link = isLinearMode(mode) ? buildShareUrl('linear-1d', linearProject) : buildShareUrl('sheet-2d', sheetProject);
+      void navigator.clipboard.writeText(link).then(() => markCopied('share')).catch(() => setError('Copy failed. Download the project JSON instead, or copy the browser address manually.'));
+      trackEvent('share_link_created', { mode: isLinearMode(mode) ? 'linear' : 'sheet', source: 'home' });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Project is too large for a share link. Download the JSON project instead.');
+    }
   };
 
   const confirmPartialExport = (format: string): boolean => {

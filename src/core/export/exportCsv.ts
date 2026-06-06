@@ -1,8 +1,15 @@
 import type { LinearOptimizationResult, SheetOptimizationResult, DisplayUnit } from '@/core/types';
 import { formatDimension } from '@/core/units/formatDimension';
 
-function quote(value: string | number): string {
+const CSV_FORMULA_PREFIX = /^[=+\-@\t\r]/;
+
+function sanitizeCsvCell(value: string | number): string {
   const text = String(value);
+  return CSV_FORMULA_PREFIX.test(text) ? `'${text}` : text;
+}
+
+function quote(value: string | number): string {
+  const text = sanitizeCsvCell(value);
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 function rowsToCsv(rows: Array<Array<string | number>>): string {
@@ -92,5 +99,5 @@ export function downloadText(filename: string, content: string, type: string): v
   link.href = url;
   link.download = filename;
   link.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }

@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
 export default function Page() {
-  redirect('/mdf-sheet-cut-calculator');
+  permanentRedirect('/mdf-sheet-cut-calculator');
 }

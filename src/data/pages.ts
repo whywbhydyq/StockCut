@@ -1,4 +1,5 @@
 import type { LinearPresetKey, SheetPresetKey } from '@/data/presets';
+import { siteUrl } from '@/data/siteMeta';
 
 export type PageKind = 'sheet' | 'linear' | 'kerf' | 'guide' | 'legal' | 'about';
 
@@ -18,7 +19,7 @@ export interface RedirectAlias {
   permanent: true;
 }
 
-export const siteUrl = 'https://stockcut.ymirtool.com';
+export { siteUrl };
 
 export const canonicalPages: SeoPage[] = [
   { slug: '/', title: 'Cut List Optimizer for Sheet Goods, Boards, Pipe, and Tube', description: 'Enter stock size, parts, kerf, and quantity to generate a browser-based cut layout, cutting sequence, waste estimate, and printable cut list for sheet goods, lumber, pipe, and tube.', kind: 'sheet', preset: 'imperial-sheet', primaryQuery: 'cut list optimizer', contentRole: 'Primary homepage workbench for broad sheet and linear cut-list intent.' },
@@ -53,11 +54,19 @@ export const canonicalPages: SeoPage[] = [
   { slug: '/grain-direction-in-cut-lists', title: 'Grain Direction in Cut Lists', description: 'Understand rotation locks, grain direction, cabinet panels, and how grain affects sheet cutting layouts.', kind: 'guide' },
   { slug: '/edge-banding-in-cut-list', title: 'Edge Banding in a Cut List', description: 'Track top, right, bottom, and left edge banding marks in printable cabinet and melamine cut lists.', kind: 'guide' },
   { slug: '/reduce-plywood-waste', title: 'How to Reduce Plywood Waste', description: 'Use kerf, rotation, offcuts, stock sizes, and practical layout checks to reduce plywood waste.', kind: 'guide' },
+  { slug: '/cut-list-optimization-methodology', title: 'Cut List Optimization Methodology', description: 'Review how StockCut handles kerf, rectangular sheet placement, linear stock packing, offcuts, limits, and shop verification before cutting material.', kind: 'guide', primaryQuery: 'cut list optimization methodology', contentRole: 'Methodology and trust page explaining algorithm boundaries, validation checks, and practical shop review.' },
   { slug: '/privacy', title: 'Privacy Policy', description: 'StockCut processes cut lists locally in your browser and does not upload or cloud-save project data.', kind: 'legal' },
   { slug: '/terms', title: 'Terms of Use', description: 'Terms for using StockCut as a free planning tool for estimated cutting layouts.', kind: 'legal' },
   { slug: '/disclaimer', title: 'Disclaimer', description: 'StockCut provides planning estimates only. Verify dimensions, tool settings, and safety before cutting.', kind: 'legal' },
   { slug: '/about', title: 'About StockCut', description: 'About the StockCut local-first cut list optimizer project.', kind: 'about' },
-  { slug: '/contact', title: 'Contact and Feedback', description: 'How to send feedback about StockCut layouts, unit parsing, or page presets.', kind: 'about' }
+  { slug: '/contact', title: 'Contact and Feedback', description: 'How to send feedback about StockCut layouts, unit parsing, or page presets.', kind: 'about' },
+  { slug: '/site-map', title: 'StockCut Site Map', description: 'Browse every canonical StockCut calculator, guide, policy page, machine-readable index, and redirected legacy path from one crawlable page.', kind: 'guide', primaryQuery: 'StockCut site map', contentRole: 'Human-readable crawl and navigation index for canonical StockCut pages.' },
+  { slug: '/seo-quality', title: 'StockCut SEO Quality Gates', description: 'Review canonical URL, redirect, structured data, evidence, machine-readability, security, performance, and ads-policy quality gates for StockCut releases.', kind: 'guide', primaryQuery: 'StockCut SEO quality gates', contentRole: 'Human-readable release quality gate page for search, AI citation, indexability, and production verification governance.' },
+  { slug: '/seo-release-checklist', title: 'StockCut SEO Release Checklist', description: 'Verify production endpoints, canonical HTML pages, redirect samples, headers, assets, PageSpeed, Search Console, and content drift after StockCut deployments.', kind: 'guide', primaryQuery: 'StockCut SEO release checklist', contentRole: 'Human-readable production release checklist for endpoint validation, content drift monitoring, and post-deploy search verification.' },
+  { slug: '/seo-optimization-decisions', title: 'SEO Optimization Decisions', description: 'Review the evidence gates that decide when StockCut should change titles, descriptions, internal links, schema, performance work, indexing requests, or CSP enforcement based on real production signals.', kind: 'guide', primaryQuery: 'SEO optimization decisions', contentRole: 'Governance page for production-signal-backed SEO decisions and CSP enforcement readiness.' },
+  { slug: '/seo-production-signals', title: 'StockCut Production SEO Signals', description: 'Import and interpret Search Console, PageSpeed, Rich Results, crawl, Bing, and CSP observations to decide StockCut SEO changes from real production data.', kind: 'guide', primaryQuery: 'StockCut production SEO signals', contentRole: 'Human-readable production-signal intake plan for Search Console, PageSpeed, Rich Results, crawl, Bing, and CSP observations.' },
+  { slug: '/seo-evidence-ledger', title: 'StockCut SEO Evidence Ledger', description: 'Map real Search Console, PageSpeed, Rich Results, production crawl, Bing, and CSP evidence files to the SEO actions StockCut is allowed to ship.', kind: 'guide', primaryQuery: 'StockCut SEO evidence ledger', contentRole: 'Human-readable evidence ledger for production-signal files, action gating, and no-blind-change SEO governance.' },
+  { slug: '/seo-change-control', title: 'StockCut SEO Change Control', description: 'Review the evidence-backed gate that decides whether StockCut can ship metadata, internal-link, structured-data, performance, indexing, or CSP changes.', kind: 'guide', primaryQuery: 'StockCut SEO change control', contentRole: 'Human-readable change-control page for proposed SEO actions, evidence-backed candidates, and release gating.' }
 ];
 
 export const redirectAliases: RedirectAlias[] = [
@@ -94,6 +103,7 @@ export const redirectAliases: RedirectAlias[] = [
   { source: '/guides/grain-direction-in-cut-lists', destination: '/grain-direction-in-cut-lists', permanent: true },
   { source: '/guides/edge-banding-in-cut-list', destination: '/edge-banding-in-cut-list', permanent: true },
   { source: '/guides/reduce-plywood-waste', destination: '/reduce-plywood-waste', permanent: true },
+  { source: '/guides/cut-list-optimization-methodology', destination: '/cut-list-optimization-methodology', permanent: true },
   { source: '/guides/why-two-24-inch-panels-do-not-fit-on-a-48-inch-sheet', destination: '/why-two-24-inch-panels-do-not-fit-on-a-48-inch-sheet', permanent: true },
   { source: '/legal/privacy', destination: '/privacy', permanent: true },
   { source: '/legal/terms', destination: '/terms', permanent: true },

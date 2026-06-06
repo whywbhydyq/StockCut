@@ -1,10 +1,12 @@
 import type { LinearPasteResult, SheetPasteResult } from './parsePaste';
 import { parseLinearPaste, parseSheetPaste } from './parsePaste';
+import { assertFileSize, MAX_WORKBOOK_ENTRY_BYTES, MAX_WORKBOOK_FILE_BYTES, MAX_WORKBOOK_TOTAL_XML_BYTES, MAX_WORKBOOK_ZIP_ENTRIES } from '@/core/validation/limits';
 
 interface ZipEntry {
   name: string;
   method: number;
   compressedSize: number;
+  uncompressedSize: number;
   localHeaderOffset: number;
 }
 
@@ -80,14 +82,16 @@ function readZipEntries(data: Uint8Array): ZipEntry[] {
     if (u32(data, offset) !== 0x02014b50) break;
     const method = u16(data, offset + 10);
     const compressedSize = u32(data, offset + 20);
+    const uncompressedSize = u32(data, offset + 24);
     const nameLength = u16(data, offset + 28);
     const extraLength = u16(data, offset + 30);
     const commentLength = u16(data, offset + 32);
     const localHeaderOffset = u32(data, offset + 42);
     const name = decodeUtf8(data.slice(offset + 46, offset + 46 + nameLength));
-    entries.push({ name, method, compressedSize, localHeaderOffset });
+    entries.push({ name, method, compressedSize, uncompressedSize, localHeaderOffset });
     offset += 46 + nameLength + extraLength + commentLength;
   }
+  if (entries.length > MAX_WORKBOOK_ZIP_ENTRIES) throw new Error(`Workbook has too many ZIP entries. Maximum is ${MAX_WORKBOOK_ZIP_ENTRIES}.`);
   return entries;
 }
 async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
@@ -105,9 +109,19 @@ async function readZipText(data: Uint8Array, entries: ZipEntry[], name: string):
   const nameLength = u16(data, local + 26);
   const extraLength = u16(data, local + 28);
   const start = local + 30 + nameLength + extraLength;
+  if (entry.uncompressedSize > MAX_WORKBOOK_ENTRY_BYTES) throw new Error(`Workbook entry is too large: ${name}.`);
+  if (entry.compressedSize > MAX_WORKBOOK_FILE_BYTES) throw new Error(`Workbook entry is too large: ${name}.`);
   const compressed = data.slice(start, start + entry.compressedSize);
-  if (entry.method === 0) return decodeUtf8(compressed);
-  if (entry.method === 8) return decodeUtf8(await inflateRaw(compressed));
+  if (entry.method === 0) {
+    const text = decodeUtf8(compressed);
+    if (text.length > MAX_WORKBOOK_ENTRY_BYTES) throw new Error(`Workbook entry is too large: ${name}.`);
+    return text;
+  }
+  if (entry.method === 8) {
+    const inflated = await inflateRaw(compressed);
+    if (inflated.byteLength > MAX_WORKBOOK_ENTRY_BYTES) throw new Error(`Workbook entry is too large: ${name}.`);
+    return decodeUtf8(inflated);
+  }
   throw new Error(`Unsupported compression method in workbook: ${entry.method}`);
 }
 
@@ -230,6 +244,7 @@ function readCfbStream(data: Uint8Array, entry: CfbDirectoryEntry, directory: Cf
   return chainBytes(data, sectorChain(entry.startSector, fat), sectorSize, entry.size);
 }
 function readCfbWorkbookStream(buffer: ArrayBuffer): Uint8Array {
+  if (buffer.byteLength > MAX_WORKBOOK_FILE_BYTES) throw new Error('Workbook file is too large.');
   const data = new Uint8Array(buffer);
   if (!isCfb(data)) throw new Error('This file is not a readable binary .xls workbook.');
   const sectorSize = 2 ** u16(data, 30);
@@ -261,6 +276,7 @@ function readCfbWorkbookStream(buffer: ArrayBuffer): Uint8Array {
   const directory = readCfbDirectory(data, sectorSize, fat, firstDirSector);
   const workbook = directory.find((entry) => entry.type === 2 && /^(workbook|book)$/i.test(entry.name));
   if (!workbook) throw new Error('Binary .xls workbook stream was not found.');
+  if (workbook.size > MAX_WORKBOOK_ENTRY_BYTES) throw new Error('Binary .xls workbook stream is too large.');
   return readCfbStream(data, workbook, directory, sectorSize, miniSectorSize, miniCutoff, fat, miniFat);
 }
 
@@ -371,6 +387,7 @@ function parseBiffRows(workbook: Uint8Array, sheetOffset: number, sharedStrings:
 }
 
 export async function parseXlsxWorkbookToTsv(buffer: ArrayBuffer): Promise<string> {
+  if (buffer.byteLength > MAX_WORKBOOK_FILE_BYTES) throw new Error('Workbook file is too large.');
   const data = new Uint8Array(buffer);
   const entries = readZipEntries(data);
   const worksheetName = await findWorksheetName(data, entries)
@@ -378,6 +395,7 @@ export async function parseXlsxWorkbookToTsv(buffer: ArrayBuffer): Promise<strin
   if (!worksheetName) throw new Error('Workbook has no worksheet XML.');
   const sharedXml = entries.some((entry) => entry.name === 'xl/sharedStrings.xml') ? await readZipText(data, entries, 'xl/sharedStrings.xml') : '';
   const worksheetXml = await readZipText(data, entries, worksheetName);
+  if (sharedXml.length + worksheetXml.length > MAX_WORKBOOK_TOTAL_XML_BYTES) throw new Error('Workbook XML content is too large.');
   const rows = parseWorksheetRows(worksheetXml, parseSharedStrings(sharedXml));
   if (rows.length === 0) throw new Error('The first visible worksheet has no readable rows.');
   return rowsToTsv(rows);
@@ -394,6 +412,7 @@ export function parseXlsWorkbookToTsv(buffer: ArrayBuffer): string {
 }
 
 export async function parseWorkbookToTsv(file: File): Promise<string> {
+  assertFileSize(file, MAX_WORKBOOK_FILE_BYTES, 'Workbook file');
   const buffer = await file.arrayBuffer();
   const name = file.name.toLowerCase();
   if (/\.xls$/i.test(name) && !/\.xlsx$/i.test(name)) return parseXlsWorkbookToTsv(buffer);
