@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import { redirectAliases } from './src/data/pages';
+import { internalHumanRoutes, internalMachineRoutes } from './src/data/publicPolicy';
 
 const contentSecurityPolicyReportOnly = [
   "default-src 'self'",
@@ -25,7 +26,12 @@ const nextConfig: NextConfig = {
     return redirectAliases;
   },
   async headers() {
+    const noindexHeaders = [...internalHumanRoutes, ...internalMachineRoutes].map((source) => ({
+      source,
+      headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }]
+    }));
     return [
+      ...noindexHeaders,
       {
         source: '/:path*',
         headers: [

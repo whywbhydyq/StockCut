@@ -1,3 +1,4 @@
+import { internalSeoEnabled, internalSeoUnavailable } from '@/lib/internalSeoAccess';
 import { siteLastModified, siteName } from '@/data/siteMeta';
 import { siteUrl } from '@/data/pages';
 import { optimizationDecisionSummary } from '@/data/seoOptimizationDecisions';
@@ -18,6 +19,7 @@ import {
 export const dynamic = 'force-static';
 
 export function GET() {
+  if (!internalSeoEnabled()) return internalSeoUnavailable();
   const body = {
     name: `${siteName} production signals plan`,
     url: `${siteUrl}/production-signals.json`,

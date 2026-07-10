@@ -1,3 +1,4 @@
+import { internalSeoEnabled, internalSeoUnavailable } from '@/lib/internalSeoAccess';
 import { canonicalPages, redirectAliases, siteUrl } from '@/data/pages';
 import { seoIntentClusters } from '@/data/seoIntentClusters';
 import { machineReadableIndexEntries } from '@/data/seoGovernance';
@@ -8,6 +9,7 @@ import { qualityGateSummary } from '@/data/seoQualityGates';
 export const dynamic = 'force-static';
 
 export function GET() {
+  if (!internalSeoEnabled()) return internalSeoUnavailable();
   const body = {
     name: `${siteName} content drift snapshot`,
     url: `${siteUrl}/content-drift.json`,

@@ -1,3 +1,4 @@
+import { internalSeoEnabled, internalSeoUnavailable } from '@/lib/internalSeoAccess';
 import { canonicalPages, redirectAliases, siteUrl } from '@/data/pages';
 import { siteLastModified, siteName } from '@/data/siteMeta';
 import { governanceSummary } from '@/data/seoGovernance';
@@ -10,6 +11,7 @@ import { seoChangeControlSummary } from '@/data/seoChangeControl';
 export const dynamic = 'force-static';
 
 export function GET() {
+  if (!internalSeoEnabled()) return internalSeoUnavailable();
   const governance = governanceSummary();
   const body = {
     name: `${siteName} SEO quality gates`,

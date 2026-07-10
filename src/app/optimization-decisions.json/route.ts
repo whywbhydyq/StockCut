@@ -1,3 +1,4 @@
+import { internalSeoEnabled, internalSeoUnavailable } from '@/lib/internalSeoAccess';
 import { siteLastModified, siteName } from '@/data/siteMeta';
 import { siteUrl } from '@/data/pages';
 import {
@@ -15,6 +16,7 @@ import { seoChangeControlRules, seoChangeControlSummary } from '@/data/seoChange
 export const dynamic = 'force-static';
 
 export function GET() {
+  if (!internalSeoEnabled()) return internalSeoUnavailable();
   const body = {
     name: `${siteName} SEO optimization decisions`,
     url: `${siteUrl}/optimization-decisions.json`,

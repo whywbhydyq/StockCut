@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { internalSeoEnabled } from '@/lib/internalSeoAccess';
 import { organizationJsonLd, siteLastModified, siteName, siteOgImage, websiteJsonLd } from '@/data/siteMeta';
 import { siteUrl } from '@/data/pages';
 import { canonicalHtmlChecks, productionEndpointChecks, redirectCheckSamples, releaseCheckGroups, releaseCheckSummary } from '@/data/seoReleaseChecks';
@@ -7,6 +9,7 @@ const title = 'StockCut SEO Release Checklist';
 const description = 'Use the StockCut release checklist to verify production endpoints, canonical HTML pages, redirect samples, headers, assets, PageSpeed, and Search Console follow-up after deployment.';
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false },
   title,
   description,
   alternates: { canonical: '/seo-release-checklist' },
@@ -66,6 +69,7 @@ const jsonLd = {
 };
 
 export default function SeoReleaseChecklistPage() {
+  if (!internalSeoEnabled()) notFound();
   const endpoints = productionEndpointChecks();
   const canonicalSamples = canonicalHtmlChecks();
   const redirectSamples = redirectCheckSamples();

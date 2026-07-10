@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { internalSeoEnabled } from '@/lib/internalSeoAccess';
 import { organizationJsonLd, siteLastModified, siteName, siteOgImage, websiteJsonLd } from '@/data/siteMeta';
 import { siteUrl } from '@/data/pages';
 import {
@@ -15,6 +17,7 @@ const title = 'StockCut Production SEO Signals';
 const description = 'Use the StockCut production SEO signals plan to import Search Console, PageSpeed, Rich Results, crawl, Bing, and CSP observations without guessing from source-only checks.';
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false },
   title,
   description,
   alternates: { canonical: '/seo-production-signals' },
@@ -75,6 +78,7 @@ const jsonLd = {
 };
 
 export default function SeoProductionSignalsPage() {
+  if (!internalSeoEnabled()) notFound();
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />

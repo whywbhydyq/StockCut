@@ -1,3 +1,4 @@
+import { internalSeoEnabled, internalSeoUnavailable } from '@/lib/internalSeoAccess';
 import { siteLastModified, siteName } from '@/data/siteMeta';
 import { siteUrl } from '@/data/pages';
 import { evidenceFileSpecs, evidenceLedgerSummary, evidenceWorkflowSteps, pageEvidenceLedgerRecords } from '@/data/seoEvidenceLedger';
@@ -9,6 +10,7 @@ import { seoAutomationPolicy } from '@/data/seoGovernance';
 export const dynamic = 'force-static';
 
 export function GET() {
+  if (!internalSeoEnabled()) return internalSeoUnavailable();
   const body = {
     name: `${siteName} SEO evidence ledger`,
     url: `${siteUrl}/evidence-ledger.json`,

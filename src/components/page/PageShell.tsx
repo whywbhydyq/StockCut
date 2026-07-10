@@ -1,5 +1,3 @@
-import { AdSlot } from '@/components/common/AdSlot';
-import { AffiliateSlot } from '@/components/common/AffiliateSlot';
 import { ShopModeToggle } from '@/components/common/ShopModeToggle';
 import { SheetOptimizerTool } from '@/components/tools/SheetOptimizerTool';
 import { LinearOptimizerTool } from '@/components/tools/LinearOptimizerTool';
@@ -10,11 +8,11 @@ import { organizationJsonLd, siteLastModified, siteOgImage, websiteJsonLd } from
 import { guideContentBySlug } from '@/data/guideContent';
 import { presetContentBySlug, type StockCutPresetContent } from '@/data/presetContent';
 import type { LinearPresetKey, SheetPresetKey } from '@/data/presets';
-import { PageSupportSections } from '@/components/page/PageSupportSections';
 import { IntentNavigation } from '@/components/page/IntentNavigation';
 import { PageEvidencePanel } from '@/components/page/PageEvidencePanel';
 import { intentClusterJsonLd, relatedPagesFor } from '@/data/seoIntentClusters';
 import { evidenceJsonLd, pageAboutTerms, pageMentions } from '@/data/pageEvidence';
+import { detailedEvidenceRoutes } from '@/data/publicPolicy';
 
 const sheetPresetKeys = new Set<SheetPresetKey>(['imperial-sheet', 'metric-sheet', 'plywood-4x8', 'mdf-metric', 'acrylic-metric', 'melamine-cabinet', 'cabinet', 'bookshelf', 'drawer-box', 'closet-shelf', 'workbench']);
 const linearPresetKeys = new Set<LinearPresetKey>(['imperial-linear', 'metric-linear', 'linear-bar', 'steel-tube', 'aluminum-extrusion', 'pvc-pipe', 'lumber-length', 'rebar']);
@@ -97,33 +95,33 @@ function jsonLd(page: SeoPage) {
       ? ['Linear stock cut optimization', 'Kerf-aware cut sequence', 'Reusable offcut tracking', 'CSV, JSON, and PDF output']
       : ['Rectangular sheet layout optimization', 'Kerf-aware panel placement', 'Rotation and grain review', 'Printable diagrams and CSV, JSON, PDF, DXF output']
   };
-  return JSON.stringify({ '@context': 'https://schema.org', '@graph': [organizationJsonLd(), websiteJsonLd(), intentClusterJsonLd(), webPage, app, evidenceJsonLd(page), breadcrumb] });
+  const graph: unknown[] = [organizationJsonLd(), websiteJsonLd(), intentClusterJsonLd(), webPage, breadcrumb];
+  if (page.kind !== 'legal' && page.kind !== 'about') graph.splice(4, 0, app, evidenceJsonLd(page));
+  return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph });
 }
 
 export function PageShell({ page }: { page: SeoPage }) {
   const sheetPreset = sheetPresetKeys.has(page.preset as SheetPresetKey) ? page.preset as SheetPresetKey : 'imperial-sheet';
   const linearPreset = linearPresetKeys.has(page.preset as LinearPresetKey) ? page.preset as LinearPresetKey : 'imperial-linear';
   const presetContent = presetContentBySlug[page.slug];
-  return <main className="mx-auto max-w-7xl px-4 py-8">
+  const isTool = page.kind === 'sheet' || page.kind === 'linear' || page.kind === 'kerf';
+  return <main className="mx-auto max-w-7xl px-4 py-6 md:py-8">
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(page) }} />
-    <ShopModeToggle />
-    <section className="mb-4 md:mb-6">
-      <p className="mb-3 inline-flex rounded-full border border-stock-line bg-stock-paper px-3 py-1 text-sm font-semibold text-stock-muted">Local-first · kerf-aware · printable</p>
+    {isTool && <ShopModeToggle />}
+    {page.kind === 'sheet' && page.slug.includes('plywood-yield') ? <PlywoodYieldCalculator /> : null}
+    {page.kind === 'sheet' && !page.slug.includes('plywood-yield') && <SheetOptimizerTool preset={sheetPreset} />}
+    {page.kind === 'linear' && <LinearOptimizerTool preset={linearPreset} />}
+    {page.kind === 'kerf' && <KerfCalculator />}
+    <section className={`${isTool ? 'mt-6 ' : ''}mb-4 md:mb-6`}>
+      <p className="mb-3 inline-flex rounded-full border border-stock-line bg-stock-paper px-3 py-1 text-sm font-semibold text-stock-muted">{isTool ? 'Local-first · kerf-aware · printable' : page.kind === 'guide' ? 'Practical cutting guide' : 'StockCut information'}</p>
       <h1 className="print-title max-w-5xl text-3xl font-black tracking-tight md:text-5xl">{page.title}</h1>
       <p className="mt-3 max-w-3xl text-base text-stock-muted">{page.description}</p>
     </section>
-    {page.kind === 'sheet' && <SheetOptimizerTool preset={sheetPreset} />}
-    {page.kind === 'linear' && <LinearOptimizerTool preset={linearPreset} />}
-    {page.kind === 'kerf' && <KerfCalculator />}
-    {(page.slug.includes('plywood-yield') || page.slug === '/tools/plywood-yield-calculator') && <PlywoodYieldCalculator />}
     {presetContent && <PresetContent content={presetContent} />}
     {page.kind === 'guide' && <GuideContent page={page} />}
     {(page.kind === 'legal' || page.kind === 'about') && <LegalContent page={page} />}
-    <PageEvidencePanel page={page} />
-    <IntentNavigation page={page} />
-    <AdSlot />
-    <AffiliateSlot />
-    <PageSupportSections />
+    {detailedEvidenceRoutes.has(page.slug) && <PageEvidencePanel page={page} />}
+    {(isTool || page.kind === 'guide') && <IntentNavigation page={page} />}
   </main>;
 }
 

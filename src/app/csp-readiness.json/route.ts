@@ -1,3 +1,4 @@
+import { internalSeoEnabled, internalSeoUnavailable } from '@/lib/internalSeoAccess';
 import { siteLastModified, siteName } from '@/data/siteMeta';
 import { siteUrl } from '@/data/pages';
 import { cspReadinessChecks, cspReadinessSummary, optimizationActionPolicies } from '@/data/seoOptimizationDecisions';
@@ -5,6 +6,7 @@ import { cspReadinessChecks, cspReadinessSummary, optimizationActionPolicies } f
 export const dynamic = 'force-static';
 
 export function GET() {
+  if (!internalSeoEnabled()) return internalSeoUnavailable();
   const body = {
     name: `${siteName} CSP enforcement readiness`,
     url: `${siteUrl}/csp-readiness.json`,

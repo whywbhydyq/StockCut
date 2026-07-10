@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { internalSeoEnabled } from '@/lib/internalSeoAccess';
 import { canonicalPages, redirectAliases, siteUrl } from '@/data/pages';
 import { organizationJsonLd, siteLastModified, siteOgImage, websiteJsonLd } from '@/data/siteMeta';
 import { machineReadableIndexEntries } from '@/data/seoGovernance';
@@ -9,6 +11,7 @@ const title = 'StockCut SEO Quality Gates';
 const description = 'Review StockCut release gates for canonical URLs, redirects, structured data, evidence panels, machine-readable indexes, security headers, performance checks, and ad-policy hygiene.';
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false },
   title,
   description,
   alternates: { canonical: '/seo-quality' },
@@ -66,6 +69,7 @@ const jsonLd = {
 };
 
 export default function SeoQualityPage() {
+  if (!internalSeoEnabled()) notFound();
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />

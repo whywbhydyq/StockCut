@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { internalSeoEnabled } from '@/lib/internalSeoAccess';
 import { organizationJsonLd, siteLastModified, siteOgImage, websiteJsonLd } from '@/data/siteMeta';
 import { siteUrl } from '@/data/pages';
 import { seoChangeControlPageRecords, seoChangeControlRules, seoChangeControlSummary, seoChangeControlWorkflow, seoChangeManifestExample } from '@/data/seoChangeControl';
@@ -7,6 +9,7 @@ const title = 'StockCut SEO Change Control';
 const description = 'Review the evidence-backed gate that decides whether StockCut can ship metadata, internal-link, structured-data, performance, indexing, or CSP changes.';
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false },
   title,
   description,
   alternates: { canonical: '/seo-change-control' },
@@ -67,6 +70,7 @@ const jsonLd = {
 };
 
 export default function SeoChangeControlPage() {
+  if (!internalSeoEnabled()) notFound();
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />

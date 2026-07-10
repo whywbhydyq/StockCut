@@ -87,7 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <HomeHeader />
         {children}
         <footer className="mx-auto flex max-w-[1800px] flex-wrap justify-center gap-4 px-6 py-8 text-sm text-slate-500">
-          <Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/disclaimer">Disclaimer</Link><Link href="/about">About</Link><Link href="/contact">Contact</Link><Link href="/site-map">Site map</Link><Link href="/seo-quality">Quality gates</Link><Link href="/seo-release-checklist">Release checklist</Link><Link href="/seo-production-signals">Production signals</Link><Link href="/seo-optimization-decisions">Optimization decisions</Link><Link href="/seo-evidence-ledger">Evidence ledger</Link><Link href="/seo-change-control">Change control</Link><Link href="/feed.xml">RSS</Link><Link href="/seo-status.json">SEO status</Link>
+          <Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/disclaimer">Disclaimer</Link><Link href="/about">About</Link><Link href="/contact">Contact</Link><Link href="/site-map">Site map</Link><Link href="/feed.xml">RSS</Link>
         </footer>
       </body>
     </html>

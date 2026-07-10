@@ -1,3 +1,4 @@
+import { internalSeoEnabled, internalSeoUnavailable } from '@/lib/internalSeoAccess';
 import { siteLastModified, siteName } from '@/data/siteMeta';
 import { siteUrl } from '@/data/pages';
 import { canonicalHtmlChecks, productionEndpointChecks, redirectCheckSamples, releaseCheckGroups, releaseCheckSummary } from '@/data/seoReleaseChecks';
@@ -11,6 +12,7 @@ import { seoAutomationPolicy } from '@/data/seoGovernance';
 export const dynamic = 'force-static';
 
 export function GET() {
+  if (!internalSeoEnabled()) return internalSeoUnavailable();
   const body = {
     name: `${siteName} release checklist`,
     url: `${siteUrl}/release-checklist.json`,

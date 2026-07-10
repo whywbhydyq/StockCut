@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { internalSeoEnabled } from '@/lib/internalSeoAccess';
 import { organizationJsonLd, siteLastModified, siteOgImage, websiteJsonLd } from '@/data/siteMeta';
 import { siteUrl } from '@/data/pages';
 import { evidenceFileSpecs, evidenceLedgerSummary, evidenceWorkflowSteps, pageEvidenceLedgerRecords } from '@/data/seoEvidenceLedger';
@@ -7,6 +9,7 @@ const title = 'StockCut SEO Evidence Ledger';
 const description = 'Map real Search Console, PageSpeed, Rich Results, production crawl, Bing, and CSP evidence files to the SEO actions StockCut is allowed to ship.';
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false },
   title,
   description,
   alternates: { canonical: '/seo-evidence-ledger' },
@@ -67,6 +70,7 @@ const jsonLd = {
 };
 
 export default function SeoEvidenceLedgerPage() {
+  if (!internalSeoEnabled()) notFound();
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />

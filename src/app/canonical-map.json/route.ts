@@ -1,3 +1,4 @@
+import { internalSeoEnabled, internalSeoUnavailable } from '@/lib/internalSeoAccess';
 import { canonicalPages, redirectAliases, siteUrl } from '@/data/pages';
 import { siteLastModified, siteName } from '@/data/siteMeta';
 import { allPageQualityRecords, canonicalAliasMap, qualityGateSummary } from '@/data/seoQualityGates';
@@ -5,6 +6,7 @@ import { allPageQualityRecords, canonicalAliasMap, qualityGateSummary } from '@/
 export const dynamic = 'force-static';
 
 export function GET() {
+  if (!internalSeoEnabled()) return internalSeoUnavailable();
   const body = {
     name: `${siteName} canonical map`,
     url: `${siteUrl}/canonical-map.json`,

@@ -1,3 +1,4 @@
+import { internalSeoEnabled, internalSeoUnavailable } from '@/lib/internalSeoAccess';
 import { canonicalPages, siteUrl } from '@/data/pages';
 import { clusterForPage, pageUrl, relatedPagesFor } from '@/data/seoIntentClusters';
 import { siteLastModified, siteName } from '@/data/siteMeta';
@@ -19,6 +20,7 @@ function schemaTypesForKind(kind: string) {
 }
 
 export function GET() {
+  if (!internalSeoEnabled()) return internalSeoUnavailable();
   const governance = governanceSummary();
   const body = {
     name: `${siteName} content inventory`,

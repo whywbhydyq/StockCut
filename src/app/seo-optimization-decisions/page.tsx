@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { internalSeoEnabled } from '@/lib/internalSeoAccess';
 import { organizationJsonLd, siteLastModified, siteOgImage, websiteJsonLd } from '@/data/siteMeta';
 import { siteUrl } from '@/data/pages';
 import {
@@ -14,6 +16,7 @@ const title = 'StockCut SEO Optimization Decisions';
 const description = 'Use real Search Console, PageSpeed, Rich Results, production crawl, and CSP report-only data to decide which StockCut SEO changes are allowed, blocked, or ready to ship.';
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false },
   title,
   description,
   alternates: { canonical: '/seo-optimization-decisions' },
@@ -75,6 +78,7 @@ const jsonLd = {
 };
 
 export default function SeoOptimizationDecisionsPage() {
+  if (!internalSeoEnabled()) notFound();
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
