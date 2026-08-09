@@ -6,6 +6,8 @@ const shell = read('src/components/page/PageShell.tsx');
 const layout = read('src/app/layout.tsx');
 const ads = read('src/components/ads/AdSenseAutoAds.tsx');
 const config = read('next.config.ts');
+const vercelConfig = read('vercel.json');
+const packageJson = read('package.json');
 const sitemap = read('src/app/sitemap.ts');
 const homeWorkspace = read('src/components/home/StockCutHomeWorkspace.tsx');
 const homePage = read('src/app/page.tsx');
@@ -28,6 +30,8 @@ assert.ok(!layout.includes('Quality gates') && !layout.includes('Production sign
 assert.ok(config.includes('X-Robots-Tag') && config.includes('internalMachineRoutes'), 'Internal pages and endpoints require noindex headers.');
 assert.ok(!read('src/app/humans.txt/route.ts').includes('site-index.json'), 'Public humans.txt must not advertise internal governance endpoints.');
 assert.ok(sitemap.includes('canonicalPages'), 'Sitemap should be generated from public canonical pages.');
+assert.ok(vercelConfig.includes('npm ci --ignore-scripts') && !vercelConfig.includes('package-lock=false'), 'Vercel installs must use the committed lockfile through npm ci.');
+assert.ok(packageJson.includes('"node": "24.x"'), 'Production Node engine must match the Vercel project Node 24 setting.');
 assert.ok(homeWorkspace.includes('Straight-cut sequence') && homeWorkspace.includes('cutSequence'), 'Sheet results must expose the generated straight-cut sequence.');
 const pdfExport = read('src/core/export/exportPdf.ts');
 assert.ok(pdfExport.includes('straight-cut sequence') && pdfExport.includes('sheet.cutSequence'), 'PDF output must include the same ordered sheet cut sequence.');
