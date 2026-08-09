@@ -7,10 +7,13 @@ const layout = read('src/app/layout.tsx');
 const ads = read('src/components/ads/AdSenseAutoAds.tsx');
 const config = read('next.config.ts');
 const sitemap = read('src/app/sitemap.ts');
+const homeWorkspace = read('src/components/home/StockCutHomeWorkspace.tsx');
+const homePage = read('src/app/page.tsx');
 for (const route of ['/seo-quality','/seo-release-checklist','/seo-production-signals','/seo-optimization-decisions','/seo-evidence-ledger','/seo-change-control']) {
   assert.ok(!pages.includes(`slug: '${route}'`), `${route} must not be canonical or in sitemap.`);
   const source = read(`src/app${route}/page.tsx`);
   assert.ok(source.includes('internalSeoEnabled') && source.includes('notFound()'), `${route} must be unavailable unless the internal feature flag is explicitly enabled.`);
+  assert.ok(source.includes('robots: { index: false, follow: false }'), `${route} must carry explicit noindex metadata.`);
 }
 for (const route of ['/canonical-map.json','/change-control.json','/content-drift.json','/content-inventory.json','/csp-readiness.json','/evidence-ledger.json','/optimization-decisions.json','/production-signals.json','/quality-gates.json','/release-checklist.json','/seo-status.json','/site-index.json']) {
   const source = read(`src/app${route}/route.ts`);
@@ -25,4 +28,11 @@ assert.ok(!layout.includes('Quality gates') && !layout.includes('Production sign
 assert.ok(config.includes('X-Robots-Tag') && config.includes('internalMachineRoutes'), 'Internal pages and endpoints require noindex headers.');
 assert.ok(!read('src/app/humans.txt/route.ts').includes('site-index.json'), 'Public humans.txt must not advertise internal governance endpoints.');
 assert.ok(sitemap.includes('canonicalPages'), 'Sitemap should be generated from public canonical pages.');
+assert.ok(homeWorkspace.includes('Straight-cut sequence') && homeWorkspace.includes('cutSequence'), 'Sheet results must expose the generated straight-cut sequence.');
+const pdfExport = read('src/core/export/exportPdf.ts');
+assert.ok(pdfExport.includes('straight-cut sequence') && pdfExport.includes('sheet.cutSequence'), 'PDF output must include the same ordered sheet cut sequence.');
+assert.ok(layout.includes("@vercel/analytics/next") && layout.includes('<Analytics />'), 'Vercel pageview analytics must be mounted in the root layout.');
+assert.ok(homePage.includes('OptimizerBenchmarkSection'), 'Homepage must publish reproducible optimizer benchmark cases.');
+const benchmarkSection = read('src/components/home/OptimizerBenchmarkSection.tsx');
+assert.ok(benchmarkSection.includes('deterministic heuristic') && benchmarkSection.includes('not an optimality proof'), 'Benchmark copy must state the optimizer limitation honestly.');
 console.log('StockCut validation passed: public tools retained, tool-first rendering, internal SEO governance isolated, sitemap and advertising policies enforced.');

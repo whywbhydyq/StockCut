@@ -25,6 +25,7 @@
     "seo:drift-compare": "node scripts/compare-seo-source-baseline.mjs --baseline .seo-cache/seo-source-baseline.json --out .seo-cache/seo-source-drift-report.json"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "next": "15.5.19",
     "react": "19.1.0",
     "react-dom": "19.1.0"

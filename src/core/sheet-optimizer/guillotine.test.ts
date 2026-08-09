@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { optimizeSheetProject } from './guillotine';
+import { exportSheetResultCsv } from '@/core/export/exportCsv';
 
 describe('optimizeSheetProject', () => {
   it('makes kerf-aware 48x96 layouts differ', () => {
@@ -75,6 +76,45 @@ describe('optimizeSheetProject', () => {
     const r = optimizeSheetProject({ unit: 'in', kerf: '1/8', stock: { id: 's', label: '4x8 plywood', width: '48', height: '96', quantity: 'auto', trimTop: '0', trimRight: '0', trimBottom: '0', trimLeft: '0' }, parts });
     expect(r.sheetsUsed.length).toBeGreaterThan(0);
     expect(performance.now() - started).toBeLessThan(3000);
+  });
+
+  it('emits an ordered, executable straight-cut sequence inside each source region', () => {
+    const result = optimizeSheetProject({
+      unit: 'in',
+      kerf: '1/8',
+      stock: { id: 's', label: 'Test sheet', width: '48', height: '48', quantity: '1', trimTop: '1', trimRight: '1', trimBottom: '1', trimLeft: '1' },
+      parts: [
+        { id: 'a', label: 'Panel A', width: '20', height: '12', quantity: '2', allowRotation: false },
+        { id: 'b', label: 'Panel B', width: '10', height: '8', quantity: '2', allowRotation: true }
+      ]
+    });
+    const sheet = result.sheetsUsed[0];
+    expect(sheet.cutSequence.length).toBeGreaterThan(0);
+    expect(sheet.cutSequence.map((cut) => cut.order)).toEqual(sheet.cutSequence.map((_, index) => index + 1));
+    for (const cut of sheet.cutSequence) {
+      expect(cut.endUm - cut.startUm).toBe(cut.lengthUm);
+      expect(cut.lengthUm).toBeGreaterThan(0);
+      expect(cut.kerfUm).toBeGreaterThan(0);
+      if (cut.axis === 'vertical') {
+        expect(cut.positionUm).toBeGreaterThanOrEqual(cut.regionXUm);
+        expect(cut.positionUm).toBeLessThanOrEqual(cut.regionXUm + cut.regionWidthUm);
+        expect(cut.startUm).toBeGreaterThanOrEqual(cut.regionYUm);
+        expect(cut.endUm).toBeLessThanOrEqual(cut.regionYUm + cut.regionHeightUm);
+      } else {
+        expect(cut.positionUm).toBeGreaterThanOrEqual(cut.regionYUm);
+        expect(cut.positionUm).toBeLessThanOrEqual(cut.regionYUm + cut.regionHeightUm);
+        expect(cut.startUm).toBeGreaterThanOrEqual(cut.regionXUm);
+        expect(cut.endUm).toBeLessThanOrEqual(cut.regionXUm + cut.regionWidthUm);
+      }
+    }
+    const csv = exportSheetResultCsv(result, 'in');
+    expect(csv).toContain('cut_step');
+    expect(csv).toContain('cut_axis');
+  });
+
+  it('does not invent a cut when one part exactly fills the usable sheet', () => {
+    const result = optimizeSheetProject({ unit: 'in', kerf: '1/8', stock: { id: 's', label: 'Exact sheet', width: '10', height: '10', quantity: '1', trimTop: '0', trimRight: '0', trimBottom: '0', trimLeft: '0' }, parts: [{ id: 'p', label: 'Exact panel', width: '10', height: '10', quantity: '1', allowRotation: false }] });
+    expect(result.sheetsUsed[0].cutSequence).toEqual([]);
   });
 
 });

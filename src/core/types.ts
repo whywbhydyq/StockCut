@@ -138,6 +138,25 @@ export interface OffcutRegion {
   areaUm2: number;
 }
 
+export type SheetCutAxis = 'vertical' | 'horizontal';
+
+export interface SheetCutOperation {
+  order: number;
+  axis: SheetCutAxis;
+  positionUm: number;
+  startUm: number;
+  endUm: number;
+  lengthUm: number;
+  kerfUm: number;
+  regionXUm: number;
+  regionYUm: number;
+  regionWidthUm: number;
+  regionHeightUm: number;
+  partId: string;
+  partLabel: string;
+  instanceIndex: number;
+}
+
 export interface OptimizedSheet {
   stockId: string;
   stockLabel: string;
@@ -149,6 +168,7 @@ export interface OptimizedSheet {
   usableWidthUm: number;
   usableHeightUm: number;
   placements: SheetPlacement[];
+  cutSequence: SheetCutOperation[];
   offcuts: OffcutRegion[];
   material?: string;
   grainDirection?: GrainLock;
@@ -224,4 +244,3 @@ export interface LinearOptimizationResult {
   wasteRate: number;
   warnings: OptimizationWarning[];
 }
-

@@ -17,6 +17,7 @@ function baseSheet(): OptimizedSheet {
       { partId: 'a', partLabel: 'A', instanceIndex: 1, xUm: 0, yUm: 0, widthUm: 300, heightUm: 300, rotated: false },
       { partId: 'b', partLabel: 'B', instanceIndex: 1, xUm: 500, yUm: 0, widthUm: 300, heightUm: 300, rotated: false }
     ],
+    cutSequence: [{ order: 1, axis: 'vertical', positionUm: 300, startUm: 0, endUm: 1000, lengthUm: 1000, kerfUm: 3, regionXUm: 0, regionYUm: 0, regionWidthUm: 1000, regionHeightUm: 1000, partId: 'a', partLabel: 'A', instanceIndex: 1 }],
     offcuts: []
   };
 }
@@ -28,6 +29,7 @@ describe('manual sheet adjustment', () => {
     expect(moved.sheet.placements[0].xUm).toBe(100);
     expect(moved.sheet.placements[0].yUm).toBe(500);
     expect(moved.sheet.offcuts.length).toBeGreaterThan(0);
+    expect(moved.sheet.cutSequence).toEqual([]);
   });
 
   it('blocks overlapping manual moves', () => {

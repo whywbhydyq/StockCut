@@ -69,7 +69,7 @@ export function manuallyMoveSheetPlacement(sheet: OptimizedSheet, key: string, x
   const placements = sheet.placements.map((placement, i) => i === index ? moved : placement);
   const collision = placements.some((placement, i) => i !== index && rectsOverlap(moved, placement));
   if (collision) return { ok: false, sheet, message: 'Manual move blocked: that position overlaps another part.' };
-  const nextSheet: OptimizedSheet = { ...sheet, placements };
+  const nextSheet: OptimizedSheet = { ...sheet, placements, cutSequence: [] };
   return { ok: true, sheet: { ...nextSheet, offcuts: recomputeSheetOffcuts(nextSheet) } };
 }
 
@@ -87,6 +87,6 @@ export function rotateSheetPlacement(sheet: OptimizedSheet, key: string): Manual
   const placements = sheet.placements.map((placement, i) => i === index ? rotated : placement);
   const collision = placements.some((placement, i) => i !== index && rectsOverlap(rotated, placement));
   if (collision) return { ok: false, sheet, message: 'Rotation blocked: rotated part overlaps another part.' };
-  const nextSheet: OptimizedSheet = { ...sheet, placements };
+  const nextSheet: OptimizedSheet = { ...sheet, placements, cutSequence: [] };
   return { ok: true, sheet: { ...nextSheet, offcuts: recomputeSheetOffcuts(nextSheet) } };
 }

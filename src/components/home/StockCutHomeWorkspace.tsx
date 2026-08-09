@@ -185,6 +185,42 @@ function SheetResultPreview({ result, unit }: { result: SheetOptimizationResult;
   );
 }
 
+function SheetCutSequence({ result, unit }: { result: SheetOptimizationResult; unit: DisplayUnit }) {
+  const totalSteps = result.sheetsUsed.reduce((sum, sheet) => sum + sheet.cutSequence.length, 0);
+  return (
+    <section className="sc4-cut-sequence" aria-label="Straight-cut sequence">
+      <div className="sc4-cut-sequence-heading">
+        <div><strong>Straight-cut sequence</strong><span>{totalSteps} ordered cuts across {result.sheetsUsed.length} sheet{result.sheetsUsed.length === 1 ? '' : 's'}</span></div>
+        <p>Coordinates use the stock&apos;s top-left origin. Each row names the source region created by earlier cuts.</p>
+      </div>
+      {result.sheetsUsed.map((sheet, sheetIndex) => (
+        <details key={`${sheet.stockId}-${sheet.sheetIndex}`} open={sheetIndex === 0}>
+          <summary>Sheet {sheet.sheetIndex}: {sheet.stockLabel} ({sheet.cutSequence.length} cuts)</summary>
+          {sheet.cutSequence.length > 0 ? (
+            <div className="sc4-cut-table-wrap">
+              <table>
+                <thead><tr><th>Step</th><th>Direction and line</th><th>Source region</th><th>Releases</th><th>Kerf</th></tr></thead>
+                <tbody>{sheet.cutSequence.map((cut) => (
+                  <tr key={`${sheet.sheetIndex}-${cut.order}`}>
+                    <td>{cut.order}</td>
+                    <td>{cut.axis === 'vertical'
+                      ? <>Vertical at X {formatDimension(cut.positionUm, unit)}, Y {formatDimension(cut.startUm, unit)} to {formatDimension(cut.endUm, unit)}</>
+                      : <>Horizontal at Y {formatDimension(cut.positionUm, unit)}, X {formatDimension(cut.startUm, unit)} to {formatDimension(cut.endUm, unit)}</>}</td>
+                    <td>{formatDimension(cut.regionWidthUm, unit)} × {formatDimension(cut.regionHeightUm, unit)} at {formatDimension(cut.regionXUm, unit)}, {formatDimension(cut.regionYUm, unit)}</td>
+                    <td>{cut.partLabel} #{cut.instanceIndex}</td>
+                    <td>{formatDimension(cut.kerfUm, unit)}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          ) : <p className="sc4-no-cuts">No separating cut is required because the placed part fills the usable source region.</p>}
+        </details>
+      ))}
+      <p className="sc4-cut-safety">Before cutting, verify dimensions, kerf side, trim, grain direction, clamping, blade clearance, and whether your saw can safely execute each source-region cut.</p>
+    </section>
+  );
+}
+
 function LinearResultPreview({ result, unit }: { result: LinearOptimizationResult; unit: DisplayUnit }) {
   const stock = result.stocksUsed[0];
   if (!stock) return <ExampleSheetPreview mode="lumber" />;
@@ -748,6 +784,7 @@ export function StockCutHomeWorkspace() {
             <StatusChip title="Cut sequence" value={!hasResult ? 'After calculation' : hasPlacedOutput ? 'Generated' : 'Not generated'} active={hasPlacedOutput} />
             <StatusChip title="Share link" value={hasResult ? 'Project link available' : 'Available after calculation'} active={hasResult} />
           </div>
+          {result?.kind === 'sheet' && result.result.sheetsUsed.length > 0 && <SheetCutSequence result={result.result} unit={sheetProject.unit} />}
           {warnings.length > 0 && <div className="sc4-warning">{warnings.slice(0, 2).map((warning, index) => <p key={`${warning.code}-${index}`}>{warning.message}</p>)}</div>}
         </section>
       </section>

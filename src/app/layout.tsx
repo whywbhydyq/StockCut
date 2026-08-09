@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
+import { Analytics } from '@vercel/analytics/next';
 import { AdSenseAutoAds } from '@/components/ads/AdSenseAutoAds';
 import { siteDescription, siteKeywords, siteName, siteOgImage, siteUrl } from '@/data/siteMeta';
 import { PwaRegister } from '@/components/common/PwaRegister';
@@ -89,6 +90,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="mx-auto flex max-w-[1800px] flex-wrap justify-center gap-4 px-6 py-8 text-sm text-slate-500">
           <Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/disclaimer">Disclaimer</Link><Link href="/about">About</Link><Link href="/contact">Contact</Link><Link href="/site-map">Site map</Link><Link href="/feed.xml">RSS</Link>
         </footer>
+        <Analytics />
       </body>
     </html>
   );

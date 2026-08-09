@@ -138,6 +138,12 @@ function drawSheetLayout(page: PdfPage, sheet: OptimizedSheet, unit: DisplayUnit
   return originY - 28;
 }
 
+function sheetCutInstruction(cut: OptimizedSheet['cutSequence'][number], unit: DisplayUnit): string {
+  return cut.axis === 'vertical'
+    ? `Vertical at X ${formatDimension(cut.positionUm, unit)} from Y ${formatDimension(cut.startUm, unit)} to ${formatDimension(cut.endUm, unit)}`
+    : `Horizontal at Y ${formatDimension(cut.positionUm, unit)} from X ${formatDimension(cut.startUm, unit)} to ${formatDimension(cut.endUm, unit)}`;
+}
+
 function drawLinearLayout(page: PdfPage, stock: OptimizedLinearStock, unit: DisplayUnit, topY: number): number {
   const boxW = PAGE_W - M * 2;
   const barH = 42;
@@ -178,7 +184,7 @@ export async function downloadSheetPdf(project: SheetProjectInput, result: Sheet
     const page: PdfPage = { commands: [] };
     drawHeader(page, `Sheet ${sheet.sheetIndex}: ${sheet.stockLabel}${sheet.isOffcut ? ' (offcut)' : ''}`, `${formatDimension(sheet.widthUm, unit)} x ${formatDimension(sheet.heightUm, unit)} | Usable ${formatDimension(sheet.usableWidthUm, unit)} x ${formatDimension(sheet.usableHeightUm, unit)} | Material: ${sheet.material ?? 'not set'}`);
     let cursor = drawSheetLayout(page, sheet, unit, PAGE_H - 92);
-    text(page, M, cursor, 'Part list and cut sequence', 10, true);
+    text(page, M, cursor, 'Placed part list', 10, true);
     cursor -= 14;
     sheet.placements.slice().sort((a, b) => a.yUm - b.yUm || a.xUm - b.xUm).slice(0, 22).forEach((p, index) => {
       text(page, M, cursor, `${index + 1}. ${p.partLabel} #${p.instanceIndex}: ${formatDimension(p.widthUm, unit)} x ${formatDimension(p.heightUm, unit)} at ${formatDimension(p.xUm, unit)}, ${formatDimension(p.yUm, unit)}${p.rotated ? ' rotated' : ''}`, 7);
@@ -194,6 +200,27 @@ export async function downloadSheetPdf(project: SheetProjectInput, result: Sheet
     }
     text(page, M, 38, 'Planning tool only. Verify every dimension, kerf, grain direction, edge trim, and machine setup before cutting.', 7);
     pages.push(page);
+
+    const sequenceChunks = sheet.cutSequence.length
+      ? Array.from({ length: Math.ceil(sheet.cutSequence.length / 28) }, (_, index) => sheet.cutSequence.slice(index * 28, index * 28 + 28))
+      : [[]];
+    sequenceChunks.forEach((cuts, chunkIndex) => {
+      const sequencePage: PdfPage = { commands: [] };
+      drawHeader(sequencePage, `Sheet ${sheet.sheetIndex} straight-cut sequence`, `${sheet.stockLabel} | Page ${chunkIndex + 1} of ${sequenceChunks.length} | Coordinates use the stock top-left origin`);
+      let sequenceCursor = PAGE_H - 96;
+      if (cuts.length === 0) {
+        sequenceCursor = multiline(sequencePage, M, sequenceCursor, 'No separating cut is required because the placed part fills the usable source region.', 9);
+      } else {
+        for (const cut of cuts) {
+          text(sequencePage, M, sequenceCursor, `${cut.order}. ${sheetCutInstruction(cut, unit)} | kerf ${formatDimension(cut.kerfUm, unit)}`, 8, true);
+          sequenceCursor -= 11;
+          text(sequencePage, M + 14, sequenceCursor, `Source region ${formatDimension(cut.regionWidthUm, unit)} x ${formatDimension(cut.regionHeightUm, unit)} at ${formatDimension(cut.regionXUm, unit)}, ${formatDimension(cut.regionYUm, unit)} | releases ${cut.partLabel} #${cut.instanceIndex}`, 7);
+          sequenceCursor -= 15;
+        }
+      }
+      multiline(sequencePage, M, Math.max(38, sequenceCursor - 6), 'Verify kerf side, trim, grain direction, workholding, blade clearance, and machine safety before executing these source-region cuts.', 7, 96);
+      pages.push(sequencePage);
+    });
   }
   if (result.unplacedParts.length) {
     const page: PdfPage = { commands: [] };

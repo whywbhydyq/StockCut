@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { StockCutHomeWorkspace } from '@/components/home/StockCutHomeWorkspace';
+import { OptimizerBenchmarkSection } from '@/components/home/OptimizerBenchmarkSection';
 import { PageEvidencePanel } from '@/components/page/PageEvidencePanel';
 import { organizationJsonLd, siteLastModified, siteName, siteOgImage, siteUrl, websiteJsonLd } from '@/data/siteMeta';
 import { intentClusterJsonLd, priorityIndexPages } from '@/data/seoIntentClusters';
@@ -94,6 +95,7 @@ export default function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <StockCutHomeWorkspace />
+      <OptimizerBenchmarkSection />
       <div className="mx-auto max-w-7xl px-4"><PageEvidencePanel page={page} /></div>
     </>
   );

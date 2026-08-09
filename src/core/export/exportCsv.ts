@@ -34,7 +34,30 @@ export function exportSheetResultCsv(result: SheetOptimizationResult, unit: Disp
     p.rotated ? 'yes' : 'no',
     p.grainLock ?? '',
     edgeText(p.edgeBanding),
-    ''
+    '', '', '', '', '', '', '', ''
+  ]));
+  const cutRows = result.sheetsUsed.flatMap((sheet) => sheet.cutSequence.map((cut) => [
+    'cut_step',
+    sheet.sheetIndex,
+    sheet.stockLabel,
+    sheet.material ?? '',
+    cut.partLabel,
+    cut.instanceIndex,
+    formatDimension(cut.regionXUm, unit),
+    formatDimension(cut.regionYUm, unit),
+    formatDimension(cut.regionWidthUm, unit),
+    formatDimension(cut.regionHeightUm, unit),
+    '',
+    '',
+    '',
+    `${cut.axis === 'vertical' ? 'X' : 'Y'} cut for ${cut.partLabel}`,
+    cut.order,
+    cut.axis,
+    formatDimension(cut.positionUm, unit),
+    formatDimension(cut.startUm, unit),
+    formatDimension(cut.endUm, unit),
+    formatDimension(cut.lengthUm, unit),
+    formatDimension(cut.kerfUm, unit)
   ]));
   const unplacedRows = result.unplacedParts.map((part) => [
     'unplaced',
@@ -50,12 +73,14 @@ export function exportSheetResultCsv(result: SheetOptimizationResult, unit: Disp
     '',
     '',
     '',
-    part.reason
+    part.reason,
+    '', '', '', '', '', '', ''
   ]);
-  const warningRows = result.warnings.map((warning) => ['warning', '', '', '', '', '', '', '', '', '', '', '', '', warning.message]);
+  const warningRows = result.warnings.map((warning) => ['warning', '', '', '', '', '', '', '', '', '', '', '', '', warning.message, '', '', '', '', '', '', '']);
   return rowsToCsv([
-    ['status', 'sheet', 'stock_label', 'material', 'label', 'instance', 'x', 'y', 'width', 'height', 'rotated', 'grain_lock', 'edge_banding', 'note'],
+    ['status', 'sheet', 'stock_label', 'material', 'label', 'instance', 'x', 'y', 'width', 'height', 'rotated', 'grain_lock', 'edge_banding', 'note', 'cut_order', 'cut_axis', 'cut_position', 'cut_start', 'cut_end', 'cut_length', 'kerf'],
     ...placedRows,
+    ...cutRows,
     ...unplacedRows,
     ...warningRows
   ]);

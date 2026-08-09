@@ -1,4 +1,4 @@
-import type { GrainLock, OptimizationWarning, OptimizedSheet, SheetOptimizationResult, SheetPartInput, SheetProjectInput, SheetPlacement, StockSheetInput, UnplacedPart } from '@/core/types';
+import type { GrainLock, OptimizationWarning, OptimizedSheet, SheetCutOperation, SheetOptimizationResult, SheetPartInput, SheetProjectInput, SheetPlacement, StockSheetInput, UnplacedPart } from '@/core/types';
 import { parseDimension } from '@/core/units/parseDimension';
 import { parseQuantity } from '@/core/validation/quantity';
 import { MAX_EXPANDED_ITEMS, MAX_PART_QUANTITY, MAX_STOCK_QUANTITY } from '@/core/validation/limits';
@@ -140,6 +140,7 @@ function makeSheet(option: StockOption, index: number): WorkingSheet {
     stockCost: option.cost,
     isOffcut: option.input.isOffcut,
     placements: [],
+    cutSequence: [],
     offcuts: [],
     freeRects: [{ xUm: option.trim.left, yUm: option.trim.top, widthUm: option.usableWidthUm, heightUm: option.usableHeightUm }]
   };
@@ -178,6 +179,78 @@ function splitAfterPlacement(rect: FreeRect, widthUm: number, heightUm: number, 
   ].filter((candidate) => candidate.widthUm > 0 && candidate.heightUm > 0);
 }
 
+function cutOperationsForPlacement(
+  rect: FreeRect,
+  widthUm: number,
+  heightUm: number,
+  kerfUm: number,
+  mode: 'vertical-first' | 'horizontal-first',
+  placement: SheetPlacement,
+  existingCount: number
+): SheetCutOperation[] {
+  const needsVerticalCut = rect.widthUm > widthUm;
+  const needsHorizontalCut = rect.heightUm > heightUm;
+  const common = {
+    kerfUm,
+    regionXUm: rect.xUm,
+    regionYUm: rect.yUm,
+    regionWidthUm: rect.widthUm,
+    regionHeightUm: rect.heightUm,
+    partId: placement.partId,
+    partLabel: placement.partLabel,
+    instanceIndex: placement.instanceIndex
+  };
+  const cuts: Array<Omit<SheetCutOperation, 'order'>> = [];
+
+  if (mode === 'vertical-first') {
+    if (needsVerticalCut) {
+      cuts.push({
+        ...common,
+        axis: 'vertical',
+        positionUm: rect.xUm + widthUm,
+        startUm: rect.yUm,
+        endUm: rect.yUm + rect.heightUm,
+        lengthUm: rect.heightUm
+      });
+    }
+    if (needsHorizontalCut) {
+      const lengthUm = needsVerticalCut ? widthUm : rect.widthUm;
+      cuts.push({
+        ...common,
+        axis: 'horizontal',
+        positionUm: rect.yUm + heightUm,
+        startUm: rect.xUm,
+        endUm: rect.xUm + lengthUm,
+        lengthUm
+      });
+    }
+  } else {
+    if (needsHorizontalCut) {
+      cuts.push({
+        ...common,
+        axis: 'horizontal',
+        positionUm: rect.yUm + heightUm,
+        startUm: rect.xUm,
+        endUm: rect.xUm + rect.widthUm,
+        lengthUm: rect.widthUm
+      });
+    }
+    if (needsVerticalCut) {
+      const lengthUm = needsHorizontalCut ? heightUm : rect.heightUm;
+      cuts.push({
+        ...common,
+        axis: 'vertical',
+        positionUm: rect.xUm + widthUm,
+        startUm: rect.yUm,
+        endUm: rect.yUm + lengthUm,
+        lengthUm
+      });
+    }
+  }
+
+  return cuts.map((cut, index) => ({ ...cut, order: existingCount + index + 1 }));
+}
+
 function scoreCandidate(rect: FreeRect, widthUm: number, heightUm: number, nextFreeRects: FreeRect[]): number {
   const wasteWidth = rect.widthUm - widthUm;
   const wasteHeight = rect.heightUm - heightUm;
@@ -196,6 +269,7 @@ function placeInSheet(sheet: WorkingSheet, part: PartInstance, kerfUm: number): 
     widthUm: number;
     heightUm: number;
     rotated: boolean;
+    splitMode: 'vertical-first' | 'horizontal-first';
     nextFreeRects: FreeRect[];
     score: number;
   };
@@ -208,7 +282,7 @@ function placeInSheet(sheet: WorkingSheet, part: PartInstance, kerfUm: number): 
         const remaining = sheet.freeRects.filter((_, index) => index !== rectIndex);
         const nextFreeRects = pruneFreeRects([...remaining, ...splitAfterPlacement(rect, orientation.widthUm, orientation.heightUm, kerfUm, splitMode)]);
         const score = scoreCandidate(rect, orientation.widthUm, orientation.heightUm, nextFreeRects);
-        if (!best || score < best.score) best = { rect, rectIndex, ...orientation, nextFreeRects, score };
+        if (!best || score < best.score) best = { rect, rectIndex, ...orientation, splitMode, nextFreeRects, score };
       }
     }
   }
@@ -228,6 +302,17 @@ function placeInSheet(sheet: WorkingSheet, part: PartInstance, kerfUm: number): 
     edgeBanding: part.edgeBanding
   };
   sheet.placements.push(placement);
+  sheet.cutSequence.push(
+    ...cutOperationsForPlacement(
+      candidate.rect,
+      candidate.widthUm,
+      candidate.heightUm,
+      kerfUm,
+      candidate.splitMode,
+      placement,
+      sheet.cutSequence.length
+    )
+  );
   sheet.freeRects = candidate.nextFreeRects;
   return true;
 }
